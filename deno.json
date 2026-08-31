@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "test": "deno test supabase/functions/social-feed",
+    "check": "deno check supabase/functions/social-feed/index.ts supabase/functions/social-feed/handler_test.ts"
+  },
+  "fmt": {
+    "lineWidth": 120,
+    "semiColons": true
+  },
+  "lint": {
+    "rules": { "tags": ["recommended"] }
+  }
+}
