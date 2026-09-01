@@ -22,9 +22,14 @@ struct FeedView: View {
 			case .idle, .loading:
 				ProgressView()
 			case .loaded(let page):
-				List(page.posts) { post in
-					PostRow(post: post) {
-						print("Post was liked")
+				List {
+					ForEach(page.posts) { post in
+						PostRow(post: post) {
+							print("Post was liked")
+						}
+						.task {
+							await viewModel.loadMoreIfNeeded(after: post)
+						}
 					}
 				}
 				.listStyle(.plain)
