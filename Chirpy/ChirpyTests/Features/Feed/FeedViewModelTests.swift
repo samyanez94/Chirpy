@@ -4,38 +4,38 @@ import Testing
 
 @MainActor
 struct FeedViewModelTests {
-    @Test
-    func testLoad() async {
-        let page = SocialFeedPage(posts: [], nextCursor: "next-page")
-        let viewModel = FeedViewModel(
-            client: SocialFeedServiceStub(result: .success(page))
-        )
+	@Test
+	func testLoad() async {
+		let page = SocialFeedPage(posts: [], nextCursor: "next-page")
+		let viewModel = FeedViewModel(
+			client: SocialFeedServiceStub(result: .success(page))
+		)
 
-        await viewModel.load()
+		await viewModel.load()
 
-        #expect(viewModel.state == .loaded(page: page))
-    }
+		#expect(viewModel.state == .loaded(page: page))
+	}
 
-    @Test
-    func testLoadError() async {
-        let viewModel = FeedViewModel(
-            client: SocialFeedServiceStub(result: .failure(.requestFailed))
-        )
+	@Test
+	func testLoadError() async {
+		let viewModel = FeedViewModel(
+			client: SocialFeedServiceStub(result: .failure(.requestFailed))
+		)
 
-        await viewModel.load()
+		await viewModel.load()
 
-        #expect(viewModel.state == .error(message: "The feed couldn’t be loaded."))
-    }
+		#expect(viewModel.state == .error(message: "The feed couldn’t be loaded."))
+	}
 }
 
 private nonisolated struct SocialFeedServiceStub: SocialFeedServicing {
-    let result: Result<SocialFeedPage, TestError>
+	let result: Result<SocialFeedPage, TestError>
 
-    func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
-        try result.get()
-    }
+	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
+		try result.get()
+	}
 }
 
 private nonisolated enum TestError: Error, Sendable {
-    case requestFailed
+	case requestFailed
 }

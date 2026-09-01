@@ -8,23 +8,23 @@
 import Foundation
 
 struct PreviewSocialFeedClient: SocialFeedServicing {
-    let result: Result<SocialFeedPage, PreviewError>
+	let result: Result<SocialFeedPage, PreviewError>
 
-    func fetchPage(
-        cursor: String?,
-        limit: Int
-    ) async throws -> SocialFeedPage {
-        try result.get()
-    }
+	func fetchPage(
+		cursor: String?,
+		limit: Int
+	) async throws -> SocialFeedPage {
+		try result.get()
+	}
 }
 
 enum PreviewError: Error {
-    case requestFailed
+	case requestFailed
 }
 
 extension SocialFeedPage {
-    static let preview = SocialFeedPage(
-        posts: [.preview],
-        nextCursor: "next-page"
-    )
+	static let preview = SocialFeedPage(
+		posts: [.preview],
+		nextCursor: "next-page"
+	)
 }

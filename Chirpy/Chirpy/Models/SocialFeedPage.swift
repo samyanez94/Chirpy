@@ -9,9 +9,9 @@ import Foundation
 
 /// A page of posts returned by the social-feed API.
 nonisolated struct SocialFeedPage: Decodable, Equatable, Sendable {
-    /// The posts included in this page.
-    let posts: [Post]
+	/// The posts included in this page.
+	let posts: [Post]
 
-    /// An opaque cursor used to request the next page.
-    let nextCursor: String?
+	/// An opaque cursor used to request the next page.
+	let nextCursor: String?
 }

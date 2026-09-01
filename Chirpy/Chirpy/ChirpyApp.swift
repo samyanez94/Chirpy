@@ -9,15 +9,15 @@ import SwiftUI
 
 @main
 struct ChirpyApp: App {
-    var body: some Scene {
-        WindowGroup {
-            FeedView(
-                viewModel: FeedViewModel(
-                    client: SocialFeedClient(
-                        baseURL: AppConfiguration.baseURL
-                    )
-                )
-            )
-        }
-    }
+	var body: some Scene {
+		WindowGroup {
+			FeedView(
+				viewModel: FeedViewModel(
+					client: SocialFeedClient(
+						baseURL: AppConfiguration.baseURL
+					)
+				)
+			)
+		}
+	}
 }

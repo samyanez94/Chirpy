@@ -9,55 +9,55 @@ import Foundation
 import SwiftUI
 
 struct FeedView: View {
-    
-    @State private var viewModel: FeedViewModel
-    
-    init(viewModel: FeedViewModel) {
-        _viewModel = State(initialValue: viewModel)
-    }
-    
-    var body: some View {
-        Group {
-            switch viewModel.state {
-            case .idle, .loading:
-                ProgressView()
-            case .loaded(let page):
-                List(page.posts) { post in
-                    PostRow(post: post) {
-                        print("Post was liked")
-                    }
-                }
-                .listStyle(.plain)
-            case .error(let message):
-                ContentUnavailableView(
-                    "Something went wrong",
-                    systemImage: "wifi.exclamationmark",
-                    description: Text(message)
-                )
-            }
-        }
-        .navigationTitle("Feed")
-        .task {
-            guard case .idle = viewModel.state else {
-                return
-            }
-            await viewModel.load()
-        }
-    }
+
+	@State private var viewModel: FeedViewModel
+
+	init(viewModel: FeedViewModel) {
+		_viewModel = State(initialValue: viewModel)
+	}
+
+	var body: some View {
+		Group {
+			switch viewModel.state {
+			case .idle, .loading:
+				ProgressView()
+			case .loaded(let page):
+				List(page.posts) { post in
+					PostRow(post: post) {
+						print("Post was liked")
+					}
+				}
+				.listStyle(.plain)
+			case .error(let message):
+				ContentUnavailableView(
+					"Something went wrong",
+					systemImage: "wifi.exclamationmark",
+					description: Text(message)
+				)
+			}
+		}
+		.navigationTitle("Feed")
+		.task {
+			guard case .idle = viewModel.state else {
+				return
+			}
+			await viewModel.load()
+		}
+	}
 }
 
 #Preview("Loaded") {
-    FeedView(
-        viewModel: FeedViewModel(
-            client: PreviewSocialFeedClient(result: .success(.preview))
-        )
-    )
+	FeedView(
+		viewModel: FeedViewModel(
+			client: PreviewSocialFeedClient(result: .success(.preview))
+		)
+	)
 }
 
 #Preview("Error") {
-    FeedView(
-        viewModel: FeedViewModel(
-            client: PreviewSocialFeedClient(result: .failure(.requestFailed))
-        )
-    )
+	FeedView(
+		viewModel: FeedViewModel(
+			client: PreviewSocialFeedClient(result: .failure(.requestFailed))
+		)
+	)
 }

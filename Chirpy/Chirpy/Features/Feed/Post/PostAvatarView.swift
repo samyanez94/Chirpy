@@ -8,20 +8,20 @@
 import SwiftUI
 
 struct PostAvatarView: View {
-    let url: URL?
+	let url: URL?
 
-    var body: some View {
-        AsyncImage(url: url) { image in
-            image
-                .resizable()
-                .scaledToFill()
-        } placeholder: {
-            Image(systemName: "person.crop.circle.fill")
-                .resizable()
-                .foregroundStyle(.secondary)
-        }
-        .frame(width: 44, height: 44)
-        .clipShape(.circle)
-        .accessibilityHidden(true)
-    }
+	var body: some View {
+		AsyncImage(url: url) { image in
+			image
+				.resizable()
+				.scaledToFill()
+		} placeholder: {
+			Image(systemName: "person.crop.circle.fill")
+				.resizable()
+				.foregroundStyle(.secondary)
+		}
+		.frame(width: 44, height: 44)
+		.clipShape(.circle)
+		.accessibilityHidden(true)
+	}
 }

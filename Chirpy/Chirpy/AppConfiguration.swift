@@ -8,5 +8,5 @@
 import Foundation
 
 enum AppConfiguration {
-    static let baseURL = URL(string: "http://127.0.0.1:54321")!
+	static let baseURL = URL(string: "http://127.0.0.1:54321")!
 }
