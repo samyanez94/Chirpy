@@ -32,6 +32,8 @@ final class FeedViewModel {
         do {
             let page = try await client.fetchPage(cursor: nil, limit: 20)
             state = .loaded(page: page)
+        }  catch is CancellationError {
+            state = .idle
         } catch {
             state = .error(message: "The feed couldn’t be loaded.")
         }
