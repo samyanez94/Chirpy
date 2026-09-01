@@ -30,25 +30,12 @@ struct PostRow: View {
 						authorDisplayName: post.author.displayName
 					)
 				}
-				HStack {
-					Button(action: onLike) {
-						HStack(spacing: 4) {
-							Image(systemName: post.isLiked ? "heart.fill" : "heart")
-							Text(post.likeCount, format: .number)
-								.contentTransition(.numericText(value: 1))
-						}
-					}
-					.font(.subheadline)
-					.buttonStyle(.plain)
-					.foregroundStyle(post.isLiked ? .red : .secondary)
-					.contentShape(.rect)
-					.accessibilityLabel(
-						post.isLiked ? "Unlike post" : "Like post"
-					)
-					.accessibilityValue("\(post.likeCount) likes")
 
-					Spacer()
-				}
+				PostToolbarView(
+					isLiked: post.isLiked,
+					likeCount: post.likeCount,
+					onLike: onLike
+				)
 			}
 		}
 		.padding(.vertical, 8)

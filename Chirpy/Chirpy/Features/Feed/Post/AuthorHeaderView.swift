@@ -34,7 +34,6 @@ struct AuthorHeaderView: View {
 					.foregroundStyle(.secondary)
 
 				Text(createdAt, style: .relative)
-					.font(.caption)
 					.foregroundStyle(.secondary)
 			}
 		}

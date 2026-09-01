@@ -12,33 +12,20 @@ struct PostImageView: View {
 	let authorDisplayName: String
 
 	var body: some View {
-		AsyncImage(url: url) { phase in
-			switch phase {
-			case .empty:
-				Rectangle()
-					.fill(.quaternary)
-					.overlay {
-						ProgressView()
-					}
-					.accessibilityLabel("Loading post image")
-
-			case .success(let image):
-				image
-					.resizable()
-					.scaledToFill()
-					.accessibilityLabel(
-						"Image attached to \(authorDisplayName)’s post"
-					)
-
-			case .failure:
-				Label("Image unavailable", systemImage: "photo")
-					.font(.callout)
-					.foregroundStyle(.secondary)
-					.frame(maxWidth: .infinity, maxHeight: .infinity)
-
-			@unknown default:
-				EmptyView()
-			}
+		AsyncImage(url: url) { image in
+			image
+				.resizable()
+				.scaledToFill()
+				.accessibilityLabel(
+					"Image attached to \(authorDisplayName)’s post"
+				)
+		} placeholder: {
+			Rectangle()
+				.fill(.quaternary)
+				.overlay {
+					ProgressView()
+				}
+				.accessibilityLabel("Loading post image")
 		}
 		.aspectRatio(16 / 9, contentMode: .fit)
 		.clipShape(.rect(cornerRadius: 12))
