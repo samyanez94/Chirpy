@@ -11,7 +11,13 @@ import SwiftUI
 struct ChirpyApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            FeedView(
+                viewModel: FeedViewModel(
+                    client: SocialFeedClient(
+                        baseURL: AppConfiguration.baseURL
+                    )
+                )
+            )
         }
     }
 }
