@@ -11,13 +11,15 @@ import SwiftUI
 struct ChirpyApp: App {
 	var body: some Scene {
 		WindowGroup {
-			FeedView(
-				viewModel: FeedViewModel(
-					client: SocialFeedClient(
-						baseURL: AppConfiguration.baseURL
+			NavigationStack {
+				FeedView(
+					viewModel: FeedViewModel(
+						client: SocialFeedClient(
+							baseURL: AppConfiguration.baseURL
+						)
 					)
 				)
-			)
+			}
 		}
 	}
 }

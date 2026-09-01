@@ -38,4 +38,18 @@ final class FeedViewModel {
 			state = .error(message: "The feed couldn’t be loaded.")
 		}
 	}
+
+	func refresh() async {
+		guard case .loaded = state else {
+			return
+		}
+		do {
+			let page = try await client.fetchPage(cursor: nil, limit: 20)
+			state = .loaded(page: page)
+		} catch is CancellationError {
+			return
+		} catch {
+			state = .error(message: "The feed couldn’t be refreshed.")
+		}
+	}
 }

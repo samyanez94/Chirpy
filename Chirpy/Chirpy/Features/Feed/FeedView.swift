@@ -28,6 +28,9 @@ struct FeedView: View {
 					}
 				}
 				.listStyle(.plain)
+				.refreshable {
+					await viewModel.refresh()
+				}
 			case .error(let message):
 				ContentUnavailableView(
 					"Something went wrong",
@@ -36,7 +39,9 @@ struct FeedView: View {
 				)
 			}
 		}
-		.navigationTitle("Feed")
+		.navigationTitle("Home")
+		.toolbarBackground(.visible, for: .navigationBar)
+		.navigationBarTitleDisplayMode(.inline)
 		.task {
 			guard case .idle = viewModel.state else {
 				return
@@ -47,17 +52,21 @@ struct FeedView: View {
 }
 
 #Preview("Loaded") {
-	FeedView(
-		viewModel: FeedViewModel(
-			client: PreviewSocialFeedClient(result: .success(.preview))
+	NavigationStack {
+		FeedView(
+			viewModel: FeedViewModel(
+				client: PreviewSocialFeedClient(result: .success(.preview))
+			)
 		)
-	)
+	}
 }
 
 #Preview("Error") {
-	FeedView(
-		viewModel: FeedViewModel(
-			client: PreviewSocialFeedClient(result: .failure(.requestFailed))
+	NavigationStack {
+		FeedView(
+			viewModel: FeedViewModel(
+				client: PreviewSocialFeedClient(result: .failure(.requestFailed))
+			)
 		)
-	)
+	}
 }
