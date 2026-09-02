@@ -1,30 +1,34 @@
 # Chirpy
 
-Chirpy is a small social-feed iOS app for practicing modern iOS development. It is a fun sandbox for Swift concurrency,
-networking, pagination, caching, optimistic updates, and testing.
+Chirpy is a small social-feed iOS app for practicing modern iOS development. It is a fun sandbox for SwiftUI, Swift
+concurrency, networking, pagination, caching, and testing.
 
 This repo contains both the iOS app and its lightweight Supabase backend. The app talks to a single Edge Function using
 plain HTTP and JSON.
+
+<p align="center">
+  <img src="docs/Images/feed.png" alt="Chirpy's social feed" width="320">
+</p>
 
 ## What it does
 
 - Shows a reverse-chronological feed
 - Loads more posts with cursor pagination
 - Likes and unlikes posts
-- Supports slow, empty, error, and duplicate-data scenarios for client testing
-- Uses deterministic fictional seed content
+- Keeps a local feed snapshot around for a faster launch and an offline fallback
+- Refreshes with pull-to-refresh
 
 The project intentionally skips accounts, post creation, replies, follows, search, notifications, and realtime updates.
 
-## Repo layout
+## Run the app
 
-```text
-supabase/
-├── functions/social-feed/   # Edge Function and tests
-├── migrations/              # Database schema
-├── config.toml              # Local Supabase config
-└── seed.sql                 # Fictional demo content
-```
+You will need a recent Xcode version that supports the project's iOS 26.5 deployment target.
+
+First, get the local backend running using the steps below. Then open `Chirpy/Chirpy.xcodeproj`, choose an iPhone
+Simulator, and hit Run. The app is already set up to talk to Supabase at `http://127.0.0.1:54321`.
+
+That address works from the Simulator. If you want to run Chirpy on a physical device, update the URL in
+`Chirpy/Chirpy/AppConfiguration.swift` to your Mac's local network address and make sure the phone can reach it.
 
 ## Run the backend locally
 
@@ -95,10 +99,14 @@ deno fmt --check
 deno lint
 ```
 
+## Run the iOS tests
+
+Open the project in Xcode, pick an iPhone Simulator, and use **Product › Test** (`⌘U`). The test suite covers feed state,
+pagination, networking, and snapshot persistence.
+
 ## A quick note on pagination
 
-Posts are ordered by `created_at DESC, id DESC`. Each response includes an opaque `nextCursor`; pass it back unchanged
-to load the next page. The API uses keyset pagination, including UUID tie-breaking for posts with identical timestamps.
+Posts are ordered by `created_at DESC, id DESC`. Each response includes an opaque `nextCursor`; pass it back unchanged to load the next page. The API uses keyset pagination, including UUID tie-breaking for posts with identical timestamps.
 
 ## Deploy the backend
 
