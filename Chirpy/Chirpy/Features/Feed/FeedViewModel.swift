@@ -44,6 +44,10 @@ final class FeedViewModel {
 		self.client = client
 	}
 
+	/// Loads the first page of posts when the feed is idle.
+	///
+	/// This method updates ``state`` to reflect loading, success, cancellation,
+	/// or failure. Calls made after the feed leaves the idle state are ignored.
 	func load() async {
 		guard state == .idle else { return }
 
@@ -64,6 +68,10 @@ final class FeedViewModel {
 		}
 	}
 
+	/// Replaces the loaded feed with a freshly fetched first page.
+	///
+	/// The current content remains unchanged if the refresh fails or if the feed
+	/// is not currently loaded.
 	func refresh() async {
 		guard case .loaded = state else {
 			return
@@ -80,6 +88,11 @@ final class FeedViewModel {
 		}
 	}
 
+	/// Fetches and appends the next available page of posts.
+	///
+	/// The request is ignored when there is no next cursor or another pagination
+	/// request is already in progress. Posts already present in the feed are not
+	/// appended again.
 	func loadNextPage() async {
 		guard case .loaded(let content) = state,
 			let cursor = content.nextCursor,
@@ -123,6 +136,9 @@ final class FeedViewModel {
 		}
 	}
 
+	/// Loads the next page when the given post is near the end of the feed.
+	///
+	/// - Parameter post: The post whose appearance may trigger pagination.
 	func loadMoreIfNeeded(after post: Post) async {
 		guard case .loaded(let content) = state,
 			let index = content.posts.firstIndex(where: {
@@ -144,6 +160,13 @@ final class FeedViewModel {
 		await loadNextPage()
 	}
 
+	/// Toggles the current user's like state for a loaded post.
+	///
+	/// The server response supplies the authoritative like state and count.
+	/// Repeated requests for the same post are ignored while an update is in
+	/// progress, and failures leave the post unchanged.
+	///
+	/// - Parameter postID: The unique identifier of the post to update.
 	func toggleLike(postID: UUID) async {
 		guard case .loaded(let content) = state,
 			let post = content.posts.first(where: { $0.id == postID }),

@@ -14,19 +14,11 @@
 			remoteGlobalIDString = 919D389B3046904F004E7826;
 			remoteInfo = Chirpy;
 		};
-		919D38B430469050004E7826 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 919D38943046904F004E7826 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 919D389B3046904F004E7826;
-			remoteInfo = Chirpy;
-		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		919D389C3046904F004E7826 /* Chirpy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Chirpy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		919D38A930469050004E7826 /* ChirpyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChirpyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		919D38B330469050004E7826 /* ChirpyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ChirpyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -38,11 +30,6 @@
 		919D38AC30469050004E7826 /* ChirpyTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = ChirpyTests;
-			sourceTree = "<group>";
-		};
-		919D38B630469050004E7826 /* ChirpyUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = ChirpyUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -62,13 +49,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		919D38B030469050004E7826 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -77,7 +57,6 @@
 			children = (
 				919D389E3046904F004E7826 /* Chirpy */,
 				919D38AC30469050004E7826 /* ChirpyTests */,
-				919D38B630469050004E7826 /* ChirpyUITests */,
 				919D389D3046904F004E7826 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -87,7 +66,6 @@
 			children = (
 				919D389C3046904F004E7826 /* Chirpy.app */,
 				919D38A930469050004E7826 /* ChirpyTests.xctest */,
-				919D38B330469050004E7826 /* ChirpyUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -140,29 +118,6 @@
 			productReference = 919D38A930469050004E7826 /* ChirpyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		919D38B230469050004E7826 /* ChirpyUITests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 919D38C330469050004E7826 /* Build configuration list for PBXNativeTarget "ChirpyUITests" */;
-			buildPhases = (
-				919D38AF30469050004E7826 /* Sources */,
-				919D38B030469050004E7826 /* Frameworks */,
-				919D38B130469050004E7826 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				919D38B530469050004E7826 /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				919D38B630469050004E7826 /* ChirpyUITests */,
-			);
-			name = ChirpyUITests;
-			packageProductDependencies = (
-			);
-			productName = ChirpyUITests;
-			productReference = 919D38B330469050004E7826 /* ChirpyUITests.xctest */;
-			productType = "com.apple.product-type.bundle.ui-testing";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -177,10 +132,6 @@
 						CreatedOnToolsVersion = 26.6;
 					};
 					919D38A830469050004E7826 = {
-						CreatedOnToolsVersion = 26.6;
-						TestTargetID = 919D389B3046904F004E7826;
-					};
-					919D38B230469050004E7826 = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = 919D389B3046904F004E7826;
 					};
@@ -202,7 +153,6 @@
 			targets = (
 				919D389B3046904F004E7826 /* Chirpy */,
 				919D38A830469050004E7826 /* ChirpyTests */,
-				919D38B230469050004E7826 /* ChirpyUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -216,13 +166,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		919D38A730469050004E7826 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		919D38B130469050004E7826 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -246,13 +189,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		919D38AF30469050004E7826 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -260,11 +196,6 @@
 			isa = PBXTargetDependency;
 			target = 919D389B3046904F004E7826 /* Chirpy */;
 			targetProxy = 919D38AA30469050004E7826 /* PBXContainerItemProxy */;
-		};
-		919D38B530469050004E7826 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 919D389B3046904F004E7826 /* Chirpy */;
-			targetProxy = 919D38B430469050004E7826 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -498,46 +429,6 @@
 			};
 			name = Release;
 		};
-		919D38C430469050004E7826 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = QFXSZ288GU;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.samuel.ChirpyUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Chirpy;
-			};
-			name = Debug;
-		};
-		919D38C530469050004E7826 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = QFXSZ288GU;
-				GENERATE_INFOPLIST_FILE = YES;
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.samuel.ChirpyUITests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				STRING_CATALOG_GENERATE_SYMBOLS = NO;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = NO;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = Chirpy;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -564,15 +455,6 @@
 			buildConfigurations = (
 				919D38C130469050004E7826 /* Debug */,
 				919D38C230469050004E7826 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		919D38C330469050004E7826 /* Build configuration list for PBXNativeTarget "ChirpyUITests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				919D38C430469050004E7826 /* Debug */,
-				919D38C530469050004E7826 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
