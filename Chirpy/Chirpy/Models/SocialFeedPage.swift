@@ -8,7 +8,7 @@
 import Foundation
 
 /// A page of posts returned by the social-feed API.
-nonisolated struct SocialFeedPage: Decodable, Equatable, Sendable {
+nonisolated struct SocialFeedPage: Codable, Equatable, Sendable {
 	/// The posts included in this page.
 	let posts: [Post]
 

@@ -23,6 +23,18 @@ struct FeedView: View {
 				ProgressView()
 			case .loaded(let page):
 				List {
+					if case .stale(let updatedAt) = page.freshness {
+						Label {
+							Text(
+								"Couldn’t refresh · Updated \(updatedAt, format: .relative(presentation: .named))"
+							)
+						} icon: {
+							Image(systemName: "clock.arrow.circlepath")
+						}
+						.font(.callout)
+						.foregroundStyle(.secondary)
+					}
+
 					ForEach(page.posts) { post in
 						PostRow(post: post) {
 							Task {
@@ -39,17 +51,17 @@ struct FeedView: View {
 					await viewModel.refresh()
 				}
 			case .error(let message):
-                ContentUnavailableView {
-                    Label("Something went wrong", systemImage: "wifi.exclamationmark")
-                } description: {
-                    Text(message)
-                } actions: {
-                    Button("Try Again") {
-                        Task {
-                            await viewModel.retry()
-                        }
-                    }
-                }
+				ContentUnavailableView {
+					Label("Something went wrong", systemImage: "wifi.exclamationmark")
+				} description: {
+					Text(message)
+				} actions: {
+					Button("Try Again") {
+						Task {
+							await viewModel.retry()
+						}
+					}
+				}
 			}
 		}
 		.navigationTitle("Home")

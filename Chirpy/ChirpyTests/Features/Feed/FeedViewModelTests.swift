@@ -78,7 +78,7 @@ struct FeedViewModelTests {
 	}
 
 	@Test
-	func testRefreshError() async {
+	func testRefreshErrorKeepsPostsAndMarksThemStale() async {
 		let initialPage = SocialFeedPage(
 			posts: [makePost(1)],
 			nextCursor: "next-page"
@@ -89,10 +89,122 @@ struct FeedViewModelTests {
 		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
-		let stateBeforeRefresh = viewModel.state
 		await viewModel.refresh()
 
-		#expect(viewModel.state == stateBeforeRefresh)
+		#expect(loadedContent(viewModel)?.posts == initialPage.posts)
+		#expect(loadedContent(viewModel)?.nextCursor == initialPage.nextCursor)
+		if case .stale = loadedContent(viewModel)?.freshness {
+		} else {
+			Issue.record("Expected a failed refresh to mark the posts stale.")
+		}
+	}
+
+	@Test
+	func testRefreshAfterFailureClearsStaleness() async {
+		let initialPage = SocialFeedPage(
+			posts: [makePost(1)],
+			nextCursor: "next-page"
+		)
+		let refreshedPage = SocialFeedPage(
+			posts: [makePost(2)],
+			nextCursor: "new-cursor"
+		)
+		let client = SocialFeedServiceSpy(
+			results: [
+				.success(initialPage),
+				.failure(.requestFailed),
+				.success(refreshedPage)
+			]
+		)
+		let viewModel = FeedViewModel(client: client)
+
+		await viewModel.load()
+		await viewModel.refresh()
+		await viewModel.refresh()
+
+		#expect(
+			viewModel.state
+				== .loaded(
+					content: FeedViewModel.FeedContent(
+						posts: refreshedPage.posts,
+						nextCursor: refreshedPage.nextCursor
+					)
+				)
+		)
+	}
+
+	@Test
+	func testLoadFallsBackToCachedPostsWhenRequestFails() async {
+		let cachedPage = SocialFeedPage(
+			posts: [makePost(1)],
+			nextCursor: "cached-cursor"
+		)
+		let savedAt = Date(timeIntervalSince1970: 1_000)
+		let viewModel = FeedViewModel(
+			client: SocialFeedServiceSpy(results: [.failure(.requestFailed)]),
+			snapshotStore: FeedSnapshotStoreSpy(
+				snapshot: FeedSnapshot(page: cachedPage, savedAt: savedAt)
+			)
+		)
+
+		await viewModel.load()
+
+		#expect(
+			viewModel.state
+				== .loaded(
+					content: FeedViewModel.FeedContent(
+						posts: cachedPage.posts,
+						nextCursor: cachedPage.nextCursor,
+						freshness: .stale(updatedAt: savedAt)
+					)
+				)
+		)
+	}
+
+	@Test
+	func testCancelledLoadDoesNotMarkCachedPostsStale() async {
+		let cachedPage = SocialFeedPage(
+			posts: [makePost(1)],
+			nextCursor: "cached-cursor"
+		)
+		let viewModel = FeedViewModel(
+			client: SocialFeedServiceSpy(results: []),
+			snapshotStore: FeedSnapshotStoreSpy(
+				snapshot: FeedSnapshot(
+					page: cachedPage,
+					savedAt: Date(timeIntervalSince1970: 1_000)
+				)
+			)
+		)
+
+		let load = Task { await viewModel.load() }
+		load.cancel()
+		await load.value
+
+		#expect(
+			viewModel.state
+				== .loaded(
+					content: FeedViewModel.FeedContent(
+						posts: cachedPage.posts,
+						nextCursor: cachedPage.nextCursor,
+						freshness: .current
+					)
+				)
+		)
+	}
+
+	@Test
+	func testLoadSavesSnapshotOfFirstPage() async {
+		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next-page")
+		let store = FeedSnapshotStoreSpy()
+		let viewModel = FeedViewModel(
+			client: SocialFeedServiceSpy(results: [.success(page)]),
+			snapshotStore: store
+		)
+
+		await viewModel.load()
+
+		#expect(await store.recordedSaves().map(\.page) == [page])
 	}
 
 	@Test
@@ -230,6 +342,42 @@ struct FeedViewModelTests {
 	}
 }
 
+@MainActor
+private func loadedContent(
+	_ viewModel: FeedViewModel
+) -> FeedViewModel.FeedContent? {
+	guard case .loaded(let content) = viewModel.state else {
+		return nil
+	}
+	return content
+}
+
+private actor FeedSnapshotStoreSpy: FeedSnapshotStoring {
+	private var snapshot: FeedSnapshot?
+	private var saves: [FeedSnapshot] = []
+
+	init(snapshot: FeedSnapshot? = nil) {
+		self.snapshot = snapshot
+	}
+
+	func loadSnapshot() async -> FeedSnapshot? {
+		snapshot
+	}
+
+	func save(snapshot: FeedSnapshot) async {
+		self.snapshot = snapshot
+		saves.append(snapshot)
+	}
+
+	func removeSnapshot() async {
+		snapshot = nil
+	}
+
+	func recordedSaves() -> [FeedSnapshot] {
+		saves
+	}
+}
+
 private actor SocialFeedServiceSpy: SocialFeedServicing {
 	private var results: [Result<SocialFeedPage, TestError>]
 	private var likeResults: [Result<PostLikeUpdate, TestError>]
@@ -245,6 +393,7 @@ private actor SocialFeedServiceSpy: SocialFeedServicing {
 	}
 
 	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
+		try Task.checkCancellation()
 		requests.append(SocialFeedRequest(cursor: cursor, limit: limit))
 
 		guard results.isEmpty == false else {

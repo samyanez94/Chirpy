@@ -23,6 +23,21 @@ final class FeedViewModel {
 		var posts: [Post]
 		var nextCursor: String?
 		var paginationState: PaginationState = .idle
+		var freshness: Freshness = .current
+	}
+
+	/// How current the displayed posts are believed to be.
+	///
+	/// This describes presentation only. Whether a request is in flight is
+	/// tracked separately by ``isFetchingFirstPage``.
+	enum Freshness: Equatable {
+		/// The posts are current as far as the app knows.
+		case current
+
+		/// The most recent attempt to update the posts failed.
+		///
+		/// - Parameter updatedAt: When the displayed posts were last fetched.
+		case stale(updatedAt: Date)
 	}
 
 	enum PaginationState: Equatable {
@@ -35,13 +50,30 @@ final class FeedViewModel {
 
 	private let client: any SocialFeedServicing
 
+	private let snapshotStore: any FeedSnapshotStoring
+
 	private(set) var state: State = .idle
 
 	@ObservationIgnored
 	private var pendingLikePostIDs = Set<UUID>()
 
-	init(client: any SocialFeedServicing) {
+	/// Whether a first-page request is in flight, from any of ``load()``,
+	/// ``refresh()``, or ``retry()``.
+	@ObservationIgnored
+	private var isFetchingFirstPage = false
+
+	/// When the displayed posts were last fetched from the server.
+	///
+	/// Seeded from a snapshot's save date when the feed starts from cache.
+	@ObservationIgnored
+	private var lastSuccessfulFetchAt: Date?
+
+	init(
+		client: any SocialFeedServicing,
+		snapshotStore: any FeedSnapshotStoring = DisabledFeedSnapshotStore()
+	) {
 		self.client = client
+		self.snapshotStore = snapshotStore
 	}
 
 	/// Loads the first page of posts when the feed is idle.
@@ -52,61 +84,105 @@ final class FeedViewModel {
 		guard state == .idle else { return }
 
 		state = .loading
+		isFetchingFirstPage = true
+		defer {
+			isFetchingFirstPage = false
+		}
+
+		var isShowingCachedPosts = false
+
+		if let snapshot = await snapshotStore.loadSnapshot(),
+			case .loading = state
+		{
+			isShowingCachedPosts = true
+			lastSuccessfulFetchAt = snapshot.savedAt
+			state = .loaded(content: snapshot.page.feedContent)
+		}
 
 		do {
 			let page = try await client.fetchPage(
 				cursor: nil,
 				limit: Self.pageSize
 			)
+			lastSuccessfulFetchAt = .now
 			state = .loaded(content: page.feedContent)
+			await snapshotStore.save(snapshot: FeedSnapshot(page: page))
 		} catch is CancellationError {
-			state = .idle
+			if isShowingCachedPosts == false {
+				state = .idle
+			}
 		} catch {
-			state = .error(
-				message: "The feed couldn’t be loaded."
-			)
+			if isShowingCachedPosts {
+				markStale()
+			} else {
+				state = .error(
+					message: "The feed couldn’t be loaded."
+				)
+			}
 		}
 	}
 
 	/// Replaces the loaded feed with a freshly fetched first page.
 	///
-	/// The current content remains unchanged if the refresh fails or if the feed
-	/// is not currently loaded.
+	/// The posts on screen are kept if the refresh fails, but are marked
+	/// ``Freshness/stale(updatedAt:)`` so the feed can say so. A cancelled
+	/// refresh leaves the feed untouched, as does one started while the feed is
+	/// not loaded or another first-page request is in flight.
 	func refresh() async {
-		guard case .loaded = state else {
+		guard case .loaded(let content) = state,
+			content.paginationState != .loading,
+			isFetchingFirstPage == false
+		else {
 			return
 		}
+
+		isFetchingFirstPage = true
+		defer {
+			isFetchingFirstPage = false
+		}
+
 		do {
 			let page = try await client.fetchPage(
 				cursor: nil,
 				limit: Self.pageSize
 			)
+			lastSuccessfulFetchAt = .now
 			state = .loaded(content: page.feedContent)
-		} catch {
+			await snapshotStore.save(snapshot: FeedSnapshot(page: page))
+		} catch is CancellationError {
 			return
+		} catch {
+			markStale()
 		}
 	}
 
-    /// Retries loading the first page after the feed enters an error state.
-    ///
-    /// This method transitions the feed back to loading and replaces the error
-    /// with newly fetched content on success. Calls made from any state other
-    /// than ``State/error(message:)`` are ignored.
-    func retry() async {
-        guard case .error = state else {
-            return
-        }
-        state = .loading
-        do {
-            let page = try await client.fetchPage(
-                cursor: nil,
-                limit: Self.pageSize
-            )
-            state = .loaded(content: page.feedContent)
-        } catch {
-            return
-        }
-    }
+	/// Retries loading the first page after the feed enters an error state.
+	///
+	/// This method transitions the feed back to loading and replaces the error
+	/// with newly fetched content on success. Calls made from any state other
+	/// than ``State/error(message:)`` are ignored.
+	func retry() async {
+		guard case .error(let message) = state else {
+			return
+		}
+		state = .loading
+		isFetchingFirstPage = true
+		defer {
+			isFetchingFirstPage = false
+		}
+
+		do {
+			let page = try await client.fetchPage(
+				cursor: nil,
+				limit: Self.pageSize
+			)
+			lastSuccessfulFetchAt = .now
+			state = .loaded(content: page.feedContent)
+			await snapshotStore.save(snapshot: FeedSnapshot(page: page))
+		} catch {
+			state = .error(message: message)
+		}
+	}
 
 	/// Fetches and appends the next available page of posts.
 	///
@@ -116,7 +192,8 @@ final class FeedViewModel {
 	func loadNextPage() async {
 		guard case .loaded(let content) = state,
 			let cursor = content.nextCursor,
-			content.paginationState != .loading
+			content.paginationState != .loading,
+			isFetchingFirstPage == false
 		else {
 			return
 		}
@@ -147,6 +224,11 @@ final class FeedViewModel {
 			updateContent(expectedCursor: cursor) {
 				$0.paginationState = .idle
 			}
+		} catch let error as APIError where error.code == "invalid_cursor" {
+			updateContent(expectedCursor: cursor) {
+				$0.paginationState = .idle
+			}
+			await refresh()
 		} catch {
 			updateContent(expectedCursor: cursor) {
 				$0.paginationState = .error(
@@ -237,6 +319,16 @@ final class FeedViewModel {
 
 		update(&content)
 		state = .loaded(content: content)
+	}
+
+	/// Marks the loaded posts as stale after a failed update.
+	private func markStale() {
+		guard let lastSuccessfulFetchAt else {
+			return
+		}
+		updateContent {
+			$0.freshness = .stale(updatedAt: lastSuccessfulFetchAt)
+		}
 	}
 }
 
