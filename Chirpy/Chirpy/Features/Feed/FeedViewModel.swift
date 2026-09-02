@@ -36,8 +36,19 @@ final class FeedViewModel {
 
 		/// The most recent attempt to update the posts failed.
 		///
-		/// - Parameter updatedAt: When the displayed posts were last fetched.
-		case stale(updatedAt: Date)
+		/// - Parameters:
+		///   - updatedAt: When the displayed posts were last fetched.
+		///   - reason: Why the update did not succeed.
+		case stale(updatedAt: Date, reason: StaleReason)
+	}
+
+	/// Why the posts on screen could not be updated.
+	enum StaleReason: Equatable {
+		/// The device has no usable network connection.
+		case offline
+
+		/// The request reached the network but did not succeed.
+		case failed
 	}
 
 	enum PaginationState: Equatable {
@@ -59,8 +70,7 @@ final class FeedViewModel {
 
 	/// Whether a first-page request is in flight, from any of ``load()``,
 	/// ``refresh()``, or ``retry()``.
-	@ObservationIgnored
-	private var isFetchingFirstPage = false
+	private(set) var isFetchingFirstPage = false
 
 	/// When the displayed posts were last fetched from the server.
 	///
@@ -113,7 +123,7 @@ final class FeedViewModel {
 			}
 		} catch {
 			if isShowingCachedPosts {
-				markStale()
+				markStale(after: error)
 			} else {
 				state = .error(
 					message: "The feed couldn’t be loaded."
@@ -152,7 +162,7 @@ final class FeedViewModel {
 		} catch is CancellationError {
 			return
 		} catch {
-			markStale()
+			markStale(after: error)
 		}
 	}
 
@@ -322,12 +332,37 @@ final class FeedViewModel {
 	}
 
 	/// Marks the loaded posts as stale after a failed update.
-	private func markStale() {
+	private func markStale(after error: any Error) {
 		guard let lastSuccessfulFetchAt else {
 			return
 		}
 		updateContent {
-			$0.freshness = .stale(updatedAt: lastSuccessfulFetchAt)
+			$0.freshness = .stale(
+				updatedAt: lastSuccessfulFetchAt,
+				reason: Self.staleReason(for: error)
+			)
+		}
+	}
+
+	/// Classifies a failed update as a connectivity problem or anything else.
+	///
+	/// Only errors that clearly mean the device cannot reach the network count
+	/// as ``StaleReason/offline``. Ambiguous ones, such as a timeout or an
+	/// unreachable host, are reported as ``StaleReason/failed`` rather than
+	/// blaming the user's connection for what may be a server problem.
+	private static func staleReason(for error: any Error) -> StaleReason {
+		guard let error = error as? URLError else {
+			return .failed
+		}
+
+		switch error.code {
+		case .notConnectedToInternet,
+			.networkConnectionLost,
+			.dataNotAllowed,
+			.internationalRoamingOff:
+			return .offline
+		default:
+			return .failed
 		}
 	}
 }

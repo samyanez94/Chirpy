@@ -23,18 +23,6 @@ struct FeedView: View {
 				ProgressView()
 			case .loaded(let page):
 				List {
-					if case .stale(let updatedAt) = page.freshness {
-						Label {
-							Text(
-								"Couldn’t refresh · Updated \(updatedAt, format: .relative(presentation: .named))"
-							)
-						} icon: {
-							Image(systemName: "clock.arrow.circlepath")
-						}
-						.font(.callout)
-						.foregroundStyle(.secondary)
-					}
-
 					ForEach(page.posts) { post in
 						PostRow(post: post) {
 							Task {
@@ -50,6 +38,21 @@ struct FeedView: View {
 				.refreshable {
 					await viewModel.refresh()
 				}
+				.safeAreaInset(edge: .top, spacing: 0) {
+					if case .stale(let updatedAt, let reason) = page.freshness {
+						StaleFeedBar(
+							updatedAt: updatedAt,
+							reason: reason,
+							isRetrying: viewModel.isFetchingFirstPage
+						) {
+							Task {
+								await viewModel.refresh()
+							}
+						}
+						.transition(.move(edge: .top).combined(with: .opacity))
+					}
+				}
+				.animation(.snappy, value: page.freshness)
 			case .error(let message):
 				ContentUnavailableView {
 					Label("Something went wrong", systemImage: "wifi.exclamationmark")
@@ -91,6 +94,38 @@ struct FeedView: View {
 		FeedView(
 			viewModel: FeedViewModel(
 				client: PreviewSocialFeedClient(result: .failure(.requestFailed))
+			)
+		)
+	}
+}
+
+#Preview("Stale — offline") {
+	NavigationStack {
+		FeedView(
+			viewModel: FeedViewModel(
+				client: PreviewSocialFeedClient(result: .failure(.offline)),
+				snapshotStore: PreviewFeedSnapshotStore(
+					snapshot: FeedSnapshot(
+						page: .preview,
+						savedAt: .now.addingTimeInterval(-7_200)
+					)
+				)
+			)
+		)
+	}
+}
+
+#Preview("Stale — request failed") {
+	NavigationStack {
+		FeedView(
+			viewModel: FeedViewModel(
+				client: PreviewSocialFeedClient(result: .failure(.requestFailed)),
+				snapshotStore: PreviewFeedSnapshotStore(
+					snapshot: FeedSnapshot(
+						page: .preview,
+						savedAt: .now.addingTimeInterval(-300)
+					)
+				)
 			)
 		)
 	}
