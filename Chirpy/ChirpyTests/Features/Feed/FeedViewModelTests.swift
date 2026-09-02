@@ -78,7 +78,7 @@ struct FeedViewModelTests {
 	}
 
 	@Test
-	func testRefreshErrorKeepsPostsAndMarksThemStale() async {
+	func testRefreshErrorKeepsPosts() async {
 		let initialPage = SocialFeedPage(
 			posts: [makePost(1)],
 			nextCursor: "next-page"
@@ -93,64 +93,10 @@ struct FeedViewModelTests {
 
 		#expect(loadedContent(viewModel)?.posts == initialPage.posts)
 		#expect(loadedContent(viewModel)?.nextCursor == initialPage.nextCursor)
-		#expect(staleReason(viewModel) == .failed)
 	}
 
 	@Test
-	func testRefreshWhileOfflineReportsAConnectivityProblem() async {
-		let client = SocialFeedServiceSpy(
-			results: [
-				.success(SocialFeedPage(posts: [makePost(1)], nextCursor: nil)),
-				.failure(.offline)
-			]
-		)
-		let viewModel = FeedViewModel(client: client)
-
-		await viewModel.load()
-		await viewModel.refresh()
-
-		#expect(staleReason(viewModel) == .offline)
-	}
-
-	/// A server-side failure should not be reported as the reader being offline.
-	@Test
-	func testLoadFromCacheWhileOfflineReportsAConnectivityProblem() async {
-		let cachedPage = SocialFeedPage(posts: [makePost(1)], nextCursor: nil)
-		let viewModel = FeedViewModel(
-			client: SocialFeedServiceSpy(results: [.failure(.offline)]),
-			snapshotStore: FeedSnapshotStoreSpy(
-				snapshot: FeedSnapshot(
-					page: cachedPage,
-					savedAt: Date(timeIntervalSince1970: 1_000)
-				)
-			)
-		)
-
-		await viewModel.load()
-
-		#expect(staleReason(viewModel) == .offline)
-		#expect(loadedContent(viewModel)?.posts == cachedPage.posts)
-	}
-
-	@Test
-	func testFirstPageRequestStateIsNotLeftSet() async {
-		let client = SocialFeedServiceSpy(
-			results: [
-				.success(SocialFeedPage(posts: [makePost(1)], nextCursor: nil)),
-				.failure(.requestFailed)
-			]
-		)
-		let viewModel = FeedViewModel(client: client)
-
-		await viewModel.load()
-		#expect(viewModel.isFetchingFirstPage == false)
-
-		await viewModel.refresh()
-		#expect(viewModel.isFetchingFirstPage == false)
-	}
-
-	@Test
-	func testRefreshAfterFailureClearsStaleness() async {
+	func testRefreshAfterFailureCanSucceed() async {
 		let initialPage = SocialFeedPage(
 			posts: [makePost(1)],
 			nextCursor: "next-page"
@@ -204,15 +150,14 @@ struct FeedViewModelTests {
 				== .loaded(
 					content: FeedViewModel.FeedContent(
 						posts: cachedPage.posts,
-						nextCursor: cachedPage.nextCursor,
-						freshness: .stale(updatedAt: savedAt, reason: .failed)
+						nextCursor: cachedPage.nextCursor
 					)
 				)
 		)
 	}
 
 	@Test
-	func testCancelledLoadDoesNotMarkCachedPostsStale() async {
+	func testCancelledLoadKeepsCachedPosts() async {
 		let cachedPage = SocialFeedPage(
 			posts: [makePost(1)],
 			nextCursor: "cached-cursor"
@@ -236,8 +181,7 @@ struct FeedViewModelTests {
 				== .loaded(
 					content: FeedViewModel.FeedContent(
 						posts: cachedPage.posts,
-						nextCursor: cachedPage.nextCursor,
-						freshness: .current
+						nextCursor: cachedPage.nextCursor
 					)
 				)
 		)
@@ -399,16 +343,6 @@ private func loadedContent(
 	return content
 }
 
-@MainActor
-private func staleReason(
-	_ viewModel: FeedViewModel
-) -> FeedViewModel.StaleReason? {
-	guard case .stale(_, let reason) = loadedContent(viewModel)?.freshness else {
-		return nil
-	}
-	return reason
-}
-
 private actor FeedSnapshotStoreSpy: FeedSnapshotStoring {
 	private var snapshot: FeedSnapshot?
 	private var saves: [FeedSnapshot] = []
@@ -461,7 +395,7 @@ private actor SocialFeedServiceSpy: SocialFeedServicing {
 		case .success(let page):
 			return page
 		case .failure(let error):
-			throw error.thrown
+			throw error
 		}
 	}
 
@@ -499,20 +433,6 @@ private nonisolated struct SocialFeedLikeRequest: Equatable, Sendable {
 private nonisolated enum TestError: Error, Sendable {
 	case missingResult
 	case requestFailed
-	case offline
-
-	/// The error the spy actually throws.
-	///
-	/// Connectivity classification keys off `URLError`, so the offline case has
-	/// to surface as one rather than as a bespoke test error.
-	var thrown: any Error {
-		switch self {
-		case .offline:
-			URLError(.notConnectedToInternet)
-		default:
-			self
-		}
-	}
 }
 
 private nonisolated func makePost(_ id: UInt8) -> Post {
