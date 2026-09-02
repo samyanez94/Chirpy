@@ -22,7 +22,7 @@ final class FeedViewModel {
 	struct FeedContent: Equatable {
 		var posts: [Post]
 		var nextCursor: String?
-		var paginationState: PaginationState = .idle
+		var isLoadingNextPage = false
 		var freshness: Freshness = .current
 	}
 
@@ -51,12 +51,6 @@ final class FeedViewModel {
 		case failed
 	}
 
-	enum PaginationState: Equatable {
-		case idle
-		case loading
-		case error(message: String)
-	}
-
 	private static let pageSize = 20
 
 	private let client: any SocialFeedServicing
@@ -68,8 +62,8 @@ final class FeedViewModel {
 	@ObservationIgnored
 	private var pendingLikePostIDs = Set<UUID>()
 
-	/// Whether a first-page request is in flight, from any of ``load()``,
-	/// ``refresh()``, or ``retry()``.
+	/// Whether a first-page request is in flight, from ``load()`` or
+	/// ``refresh()``.
 	private(set) var isFetchingFirstPage = false
 
 	/// When the displayed posts were last fetched from the server.
@@ -80,7 +74,7 @@ final class FeedViewModel {
 
 	init(
 		client: any SocialFeedServicing,
-		snapshotStore: any FeedSnapshotStoring = DisabledFeedSnapshotStore()
+		snapshotStore: any FeedSnapshotStoring = StubFeedSnapshotStore()
 	) {
 		self.client = client
 		self.snapshotStore = snapshotStore
@@ -110,13 +104,7 @@ final class FeedViewModel {
 		}
 
 		do {
-			let page = try await client.fetchPage(
-				cursor: nil,
-				limit: Self.pageSize
-			)
-			lastSuccessfulFetchAt = .now
-			state = .loaded(content: page.feedContent)
-			await snapshotStore.save(snapshot: FeedSnapshot(page: page))
+			try await fetchFirstPage()
 		} catch is CancellationError {
 			if isShowingCachedPosts == false {
 				state = .idle
@@ -135,12 +123,12 @@ final class FeedViewModel {
 	/// Replaces the loaded feed with a freshly fetched first page.
 	///
 	/// The posts on screen are kept if the refresh fails, but are marked
-	/// ``Freshness/stale(updatedAt:)`` so the feed can say so. A cancelled
+	/// ``Freshness/stale(updatedAt:reason:)`` so the feed can say so. A cancelled
 	/// refresh leaves the feed untouched, as does one started while the feed is
 	/// not loaded or another first-page request is in flight.
 	func refresh() async {
 		guard case .loaded(let content) = state,
-			content.paginationState != .loading,
+			content.isLoadingNextPage == false,
 			isFetchingFirstPage == false
 		else {
 			return
@@ -152,13 +140,7 @@ final class FeedViewModel {
 		}
 
 		do {
-			let page = try await client.fetchPage(
-				cursor: nil,
-				limit: Self.pageSize
-			)
-			lastSuccessfulFetchAt = .now
-			state = .loaded(content: page.feedContent)
-			await snapshotStore.save(snapshot: FeedSnapshot(page: page))
+			try await fetchFirstPage()
 		} catch is CancellationError {
 			return
 		} catch {
@@ -168,30 +150,14 @@ final class FeedViewModel {
 
 	/// Retries loading the first page after the feed enters an error state.
 	///
-	/// This method transitions the feed back to loading and replaces the error
-	/// with newly fetched content on success. Calls made from any state other
-	/// than ``State/error(message:)`` are ignored.
+	/// Calls made from any state other than ``State/error(message:)`` are
+	/// ignored.
 	func retry() async {
-		guard case .error(let message) = state else {
+		guard case .error = state else {
 			return
 		}
-		state = .loading
-		isFetchingFirstPage = true
-		defer {
-			isFetchingFirstPage = false
-		}
-
-		do {
-			let page = try await client.fetchPage(
-				cursor: nil,
-				limit: Self.pageSize
-			)
-			lastSuccessfulFetchAt = .now
-			state = .loaded(content: page.feedContent)
-			await snapshotStore.save(snapshot: FeedSnapshot(page: page))
-		} catch {
-			state = .error(message: message)
-		}
+		state = .idle
+		await load()
 	}
 
 	/// Fetches and appends the next available page of posts.
@@ -202,14 +168,14 @@ final class FeedViewModel {
 	func loadNextPage() async {
 		guard case .loaded(let content) = state,
 			let cursor = content.nextCursor,
-			content.paginationState != .loading,
+			content.isLoadingNextPage == false,
 			isFetchingFirstPage == false
 		else {
 			return
 		}
 
 		updateContent {
-			$0.paginationState = .loading
+			$0.isLoadingNextPage = true
 		}
 
 		do {
@@ -228,22 +194,16 @@ final class FeedViewModel {
 				)
 
 				content.nextCursor = page.nextCursor
-				content.paginationState = .idle
-			}
-		} catch is CancellationError {
-			updateContent(expectedCursor: cursor) {
-				$0.paginationState = .idle
+				content.isLoadingNextPage = false
 			}
 		} catch let error as APIError where error.code == "invalid_cursor" {
 			updateContent(expectedCursor: cursor) {
-				$0.paginationState = .idle
+				$0.isLoadingNextPage = false
 			}
 			await refresh()
 		} catch {
 			updateContent(expectedCursor: cursor) {
-				$0.paginationState = .error(
-					message: "More posts couldn’t be loaded."
-				)
+				$0.isLoadingNextPage = false
 			}
 		}
 	}
@@ -329,6 +289,18 @@ final class FeedViewModel {
 
 		update(&content)
 		state = .loaded(content: content)
+	}
+
+	/// Fetches the first page, publishes it, and records it as the newest
+	/// posts the app has seen.
+	private func fetchFirstPage() async throws {
+		let page = try await client.fetchPage(
+			cursor: nil,
+			limit: Self.pageSize
+		)
+		lastSuccessfulFetchAt = .now
+		state = .loaded(content: page.feedContent)
+		await snapshotStore.save(snapshot: FeedSnapshot(page: page))
 	}
 
 	/// Marks the loaded posts as stale after a failed update.

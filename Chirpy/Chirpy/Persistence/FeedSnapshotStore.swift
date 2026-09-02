@@ -26,50 +26,27 @@ actor FeedSnapshotStore: FeedSnapshotStoring {
 
 	private let maximumAge: TimeInterval
 
-	/// Creates a snapshot store scoped to an account when one is available.
-	///
-	/// Passing an account identifier prevents personalized feed state from being
-	/// shared between accounts. Until Chirpy has authentication, the default file
-	/// is used.
 	init(
-		accountID: UUID? = nil,
 		directory: URL = .cachesDirectory,
 		maximumAge: TimeInterval = FeedSnapshotStore.defaultMaximumAge
 	) {
-		let suffix = accountID.map { "-\($0.uuidString.lowercased())" } ?? ""
-		fileURL = directory.appending(
-			path: "feed-snapshot\(suffix).json"
-		)
+		fileURL = directory.appending(path: "feed-snapshot.json")
 		self.maximumAge = maximumAge
 	}
 
 	/// Returns the stored snapshot, or `nil` when there is no usable one.
 	///
-	/// A snapshot that is expired, written by another version, or corrupt is
-	/// deleted rather than left to fail again on the next launch.
+	/// A snapshot that is expired or unreadable is deleted rather than left to
+	/// fail again on the next launch.
 	func loadSnapshot() async -> FeedSnapshot? {
 		guard let data = readSnapshotData() else {
 			return nil
 		}
 
-		let decoder = Self.makeDecoder()
-
-		// Decoding the version on its own keeps the check meaningful: a payload
-		// whose shape changed would otherwise fail to decode before ever
-		// reaching a version comparison.
-		guard
-			let envelope = try? decoder.decode(
-				SnapshotEnvelope.self,
-				from: data
-			),
-			envelope.version == FeedSnapshot.currentVersion
-		else {
-			discardSnapshot(because: "it is unreadable or has another version")
-			return nil
-		}
-
-		guard let snapshot = try? decoder.decode(FeedSnapshot.self, from: data)
-		else {
+		guard let snapshot = try? Self.makeDecoder().decode(
+			FeedSnapshot.self,
+			from: data
+		) else {
 			discardSnapshot(because: "its contents could not be decoded")
 			return nil
 		}
@@ -154,12 +131,4 @@ actor FeedSnapshotStore: FeedSnapshotStoring {
 		encoder.dateEncodingStrategy = .iso8601
 		return encoder
 	}
-}
-
-// MARK: - SnapshotEnvelope
-
-/// The version field of a stored snapshot, decoded on its own so an
-/// incompatible payload is rejected by version rather than by decode failure.
-private nonisolated struct SnapshotEnvelope: Decodable, Sendable {
-	let version: Int
 }

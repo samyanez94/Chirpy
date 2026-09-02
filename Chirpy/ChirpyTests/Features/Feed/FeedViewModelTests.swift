@@ -310,10 +310,7 @@ struct FeedViewModelTests {
 				== .loaded(
 					content: FeedViewModel.FeedContent(
 						posts: [firstPost],
-						nextCursor: "page-two",
-						paginationState: .error(
-							message: "More posts couldn’t be loaded."
-						)
+						nextCursor: "page-two"
 					)
 				)
 		)

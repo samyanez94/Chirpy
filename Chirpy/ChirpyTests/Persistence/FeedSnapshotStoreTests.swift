@@ -92,34 +92,15 @@ struct FeedSnapshotStoreTests {
 		#expect(snapshotFileExists(in: directory) == false)
 	}
 
-	@Test
-	func discardsASnapshotWrittenByAnotherVersion() async {
-		let directory = makeTemporaryDirectory()
-		defer { removeTemporaryDirectory(directory) }
-
-		let store = FeedSnapshotStore(directory: directory)
-
-		await store.save(
-			snapshot: FeedSnapshot(
-				page: makePage(),
-				savedAt: .now,
-				version: FeedSnapshot.currentVersion + 1
-			)
-		)
-
-		#expect(await store.loadSnapshot() == nil)
-		#expect(snapshotFileExists(in: directory) == false)
-	}
-
-	/// The version gate has to fire even when the payload shape changed enough
-	/// that a full decode would throw first.
+	/// A payload written by an older build decodes as garbage now, which is
+	/// the same situation as corruption and gets the same treatment.
 	@Test
 	func discardsASnapshotWhosePayloadShapeChanged() async {
 		let directory = makeTemporaryDirectory()
 		defer { removeTemporaryDirectory(directory) }
 
 		write(
-			#"{"version":99,"savedAt":"2026-09-01T00:00:00Z","page":{"unknown":1}}"#,
+			#"{"savedAt":"2026-09-01T00:00:00Z","page":{"unknown":1}}"#,
 			to: directory
 		)
 
@@ -166,32 +147,6 @@ struct FeedSnapshotStoreTests {
 		#expect(snapshotFileExists(in: directory) == false)
 	}
 
-	@Test
-	func scopesSnapshotsByAccount() async {
-		let directory = makeTemporaryDirectory()
-		defer { removeTemporaryDirectory(directory) }
-
-		let snapshot = FeedSnapshot(
-			page: makePage(),
-			savedAt: recentWholeSecond()
-		)
-		let accountID = UUID()
-
-		await FeedSnapshotStore(
-			accountID: accountID,
-			directory: directory
-		).save(snapshot: snapshot)
-
-		#expect(
-			await FeedSnapshotStore(directory: directory).loadSnapshot() == nil
-		)
-		#expect(
-			await FeedSnapshotStore(
-				accountID: accountID,
-				directory: directory
-			).loadSnapshot() == snapshot
-		)
-	}
 }
 
 // MARK: - Helpers

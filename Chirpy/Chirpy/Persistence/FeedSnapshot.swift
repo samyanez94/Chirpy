@@ -7,20 +7,14 @@
 
 import Foundation
 
-/// A versioned, disposable copy of the first social-feed page.
+/// A disposable copy of the first social-feed page.
 nonisolated struct FeedSnapshot: Codable, Equatable, Sendable {
-	static let currentVersion = 1
-
-	let version: Int
+	/// When the posts were fetched from the server.
 	let savedAt: Date
+
 	let page: SocialFeedPage
 
-	init(
-		page: SocialFeedPage,
-		savedAt: Date = .now,
-		version: Int = Self.currentVersion
-	) {
-		self.version = version
+	init(page: SocialFeedPage, savedAt: Date = .now) {
 		self.savedAt = savedAt
 		self.page = page
 	}

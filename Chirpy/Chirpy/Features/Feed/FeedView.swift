@@ -104,7 +104,7 @@ struct FeedView: View {
 		FeedView(
 			viewModel: FeedViewModel(
 				client: PreviewSocialFeedClient(result: .failure(.offline)),
-				snapshotStore: PreviewFeedSnapshotStore(
+				snapshotStore: StubFeedSnapshotStore(
 					snapshot: FeedSnapshot(
 						page: .preview,
 						savedAt: .now.addingTimeInterval(-7_200)
@@ -120,7 +120,7 @@ struct FeedView: View {
 		FeedView(
 			viewModel: FeedViewModel(
 				client: PreviewSocialFeedClient(result: .failure(.requestFailed)),
-				snapshotStore: PreviewFeedSnapshotStore(
+				snapshotStore: StubFeedSnapshotStore(
 					snapshot: FeedSnapshot(
 						page: .preview,
 						savedAt: .now.addingTimeInterval(-300)
