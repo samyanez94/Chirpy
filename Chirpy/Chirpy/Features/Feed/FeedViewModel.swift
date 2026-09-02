@@ -76,7 +76,6 @@ final class FeedViewModel {
 		guard case .loaded = state else {
 			return
 		}
-
 		do {
 			let page = try await client.fetchPage(
 				cursor: nil,
@@ -87,6 +86,27 @@ final class FeedViewModel {
 			return
 		}
 	}
+
+    /// Retries loading the first page after the feed enters an error state.
+    ///
+    /// This method transitions the feed back to loading and replaces the error
+    /// with newly fetched content on success. Calls made from any state other
+    /// than ``State/error(message:)`` are ignored.
+    func retry() async {
+        guard case .error = state else {
+            return
+        }
+        state = .loading
+        do {
+            let page = try await client.fetchPage(
+                cursor: nil,
+                limit: Self.pageSize
+            )
+            state = .loaded(content: page.feedContent)
+        } catch {
+            return
+        }
+    }
 
 	/// Fetches and appends the next available page of posts.
 	///

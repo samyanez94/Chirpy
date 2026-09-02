@@ -39,11 +39,17 @@ struct FeedView: View {
 					await viewModel.refresh()
 				}
 			case .error(let message):
-				ContentUnavailableView(
-					"Something went wrong",
-					systemImage: "wifi.exclamationmark",
-					description: Text(message)
-				)
+                ContentUnavailableView {
+                    Label("Something went wrong", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text(message)
+                } actions: {
+                    Button("Try Again") {
+                        Task {
+                            await viewModel.retry()
+                        }
+                    }
+                }
 			}
 		}
 		.navigationTitle("Home")
