@@ -16,6 +16,17 @@ struct PreviewSocialFeedClient: SocialFeedServicing {
 	) async throws -> SocialFeedPage {
 		try result.get()
 	}
+
+	func setLike(
+		postID: UUID,
+		isLiked: Bool
+	) async throws -> PostLikeUpdate {
+		PostLikeUpdate(
+			postID: UUID(),
+			isLiked: false,
+			likeCount: 0
+		)
+	}
 }
 
 enum PreviewError: Error {

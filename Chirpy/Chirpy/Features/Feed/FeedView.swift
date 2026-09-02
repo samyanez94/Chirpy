@@ -25,7 +25,9 @@ struct FeedView: View {
 				List {
 					ForEach(page.posts) { post in
 						PostRow(post: post) {
-							print("Post was liked")
+							Task {
+								await viewModel.toggleLike(postID: post.id)
+							}
 						}
 						.task {
 							await viewModel.loadMoreIfNeeded(after: post)

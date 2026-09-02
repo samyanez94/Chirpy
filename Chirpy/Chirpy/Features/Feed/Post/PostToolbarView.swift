@@ -17,11 +17,14 @@ struct PostToolbarView: View {
 			Button(action: onLike) {
 				HStack(spacing: 4) {
 					Image(systemName: isLiked ? "heart.fill" : "heart")
+						.symbolEffect(.bounce, value: isLiked)
 					Text(likeCount, format: .number)
 						.contentTransition(
 							.numericText(value: Double(likeCount))
 						)
 				}
+				.animation(.snappy, value: isLiked)
+				.animation(.snappy, value: likeCount)
 			}
 			.font(.subheadline)
 			.buttonStyle(.plain)

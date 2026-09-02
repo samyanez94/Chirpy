@@ -14,6 +14,11 @@ nonisolated protocol SocialFeedServicing: Sendable {
 		cursor: String?,
 		limit: Int
 	) async throws -> SocialFeedPage
+
+	func setLike(
+		postID: UUID,
+		isLiked: Bool
+	) async throws -> PostLikeUpdate
 }
 
 // MARK: - SocialFeedClient
@@ -68,6 +73,30 @@ nonisolated struct SocialFeedClient: SocialFeedServicing {
 		}
 
 		return try decoder.decode(SocialFeedPage.self, from: data)
+	}
+
+	func setLike(
+		postID: UUID,
+		isLiked: Bool
+	) async throws -> PostLikeUpdate {
+		let url = baseURL.appending(
+			path: "functions/v1/social-feed/posts/\(postID)/like"
+		)
+
+		var request = URLRequest(url: url)
+		request.httpMethod = isLiked ? "POST" : "DELETE"
+
+		let (data, response) = try await httpClient.send(request: request)
+
+		guard let response = response as? HTTPURLResponse else {
+			throw URLError(.badServerResponse)
+		}
+
+		guard 200..<300 ~= response.statusCode else {
+			throw try decoder.decode(APIErrorResponse.self, from: data).error
+		}
+
+		return try decoder.decode(PostLikeUpdate.self, from: data)
 	}
 }
 

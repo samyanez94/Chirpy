@@ -37,6 +37,9 @@ final class FeedViewModel {
 
 	private(set) var state: State = .idle
 
+	@ObservationIgnored
+	private var pendingLikePostIDs = Set<UUID>()
+
 	init(client: any SocialFeedServicing) {
 		self.client = client
 	}
@@ -139,6 +142,40 @@ final class FeedViewModel {
 		}
 
 		await loadNextPage()
+	}
+
+	func toggleLike(postID: UUID) async {
+		guard case .loaded(let content) = state,
+			let post = content.posts.first(where: { $0.id == postID }),
+			pendingLikePostIDs.insert(postID).inserted
+		else {
+			return
+		}
+
+		defer {
+			pendingLikePostIDs.remove(postID)
+		}
+
+		do {
+			let update = try await client.setLike(
+				postID: postID,
+				isLiked: post.isLiked == false
+			)
+
+			updateContent { content in
+				guard
+					let index = content.posts.firstIndex(where: {
+						$0.id == update.postID
+					})
+				else {
+					return
+				}
+				content.posts[index].isLiked = update.isLiked
+				content.posts[index].likeCount = update.likeCount
+			}
+		} catch {
+			return
+		}
 	}
 
 	private func updateContent(

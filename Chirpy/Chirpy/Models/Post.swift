@@ -25,8 +25,8 @@ nonisolated struct Post: Identifiable, Codable, Equatable, Sendable {
 	let createdAt: Date
 
 	/// A Boolean value that indicates whether the current user likes the post.
-	let isLiked: Bool
+	var isLiked: Bool
 
 	/// The total number of likes the post has received.
-	let likeCount: Int
+	var likeCount: Int
 }

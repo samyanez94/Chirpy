@@ -113,6 +113,129 @@ struct SocialFeedClientTests {
 		}
 	}
 
+	@Test func testSetLike() async throws {
+		let data = try fixtureData(named: "post-like-update")
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let response = try httpResponse(url: baseURL, statusCode: 200)
+		let client = SocialFeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(data: data, response: response)
+		)
+		let postID = try #require(
+			UUID(uuidString: "10000000-0000-4000-8000-000000000001")
+		)
+
+		let update = try await client.setLike(postID: postID, isLiked: true)
+
+		#expect(update.postID == postID)
+		#expect(update.isLiked)
+		#expect(update.likeCount == 13)
+	}
+
+	@Test func testSetLikeBuildsPostRequest() async throws {
+		let data = try fixtureData(named: "post-like-update")
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let response = try httpResponse(url: baseURL, statusCode: 200)
+		let recorder = RequestRecorder()
+		let client = SocialFeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: data,
+				response: response,
+				recorder: recorder
+			)
+		)
+		let postID = try #require(
+			UUID(uuidString: "10000000-0000-4000-8000-000000000001")
+		)
+
+		_ = try await client.setLike(postID: postID, isLiked: true)
+
+		let recordedRequest = await recorder.onlyRequest()
+		let request = try #require(recordedRequest)
+		#expect(request.httpMethod == "POST")
+		#expect(
+			request.url?.path
+				== "/functions/v1/social-feed/posts/\(postID)/like"
+		)
+	}
+
+	@Test func testSetLikeBuildsDeleteRequest() async throws {
+		let data = try fixtureData(named: "post-like-update")
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let response = try httpResponse(url: baseURL, statusCode: 200)
+		let recorder = RequestRecorder()
+		let client = SocialFeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: data,
+				response: response,
+				recorder: recorder
+			)
+		)
+		let postID = try #require(
+			UUID(uuidString: "10000000-0000-4000-8000-000000000001")
+		)
+
+		_ = try await client.setLike(postID: postID, isLiked: false)
+
+		let recordedRequest = await recorder.onlyRequest()
+		let request = try #require(recordedRequest)
+		#expect(request.httpMethod == "DELETE")
+		#expect(
+			request.url?.path
+				== "/functions/v1/social-feed/posts/\(postID)/like"
+		)
+	}
+
+	@Test func testSetLikeThrowsAPIError() async throws {
+		let data = try fixtureData(named: "service-unavailable-error")
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let response = try httpResponse(url: baseURL, statusCode: 503)
+		let client = SocialFeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(data: data, response: response)
+		)
+		let postID = UUID()
+
+		do {
+			_ = try await client.setLike(postID: postID, isLiked: true)
+			Issue.record("Expected setLike() to throw an APIError.")
+		} catch let error as APIError {
+			#expect(error.code == "service_unavailable")
+			#expect(error.message == "A development failure was requested.")
+			#expect(
+				error.requestID.uuidString
+					== "00000000-0000-4000-8000-000000000001"
+			)
+		} catch {
+			Issue.record("Expected APIError, but received \(error).")
+		}
+	}
+
+	@Test func testSetLikeRejectsNonHTTPResponse() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let response = URLResponse(
+			url: baseURL,
+			mimeType: "application/json",
+			expectedContentLength: 0,
+			textEncodingName: nil
+		)
+		let client = SocialFeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(data: Data(), response: response)
+		)
+
+		do {
+			_ = try await client.setLike(postID: UUID(), isLiked: true)
+			Issue.record("Expected setLike() to reject a non-HTTP response.")
+		} catch let error as URLError {
+			#expect(error.code == .badServerResponse)
+		} catch {
+			Issue.record("Expected URLError.badServerResponse, but received \(error).")
+		}
+	}
+
 	private func fixtureData(named name: String) throws -> Data {
 		let fixtureURL = try #require(
 			Bundle(for: NetworkingTestBundleToken.self)

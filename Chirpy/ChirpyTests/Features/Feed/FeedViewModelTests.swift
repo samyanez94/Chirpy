@@ -190,14 +190,58 @@ struct FeedViewModelTests {
 			]
 		)
 	}
+
+	@Test
+	func testToggleLike() async {
+		let post = makePost(1)
+		let page = SocialFeedPage(posts: [post], nextCursor: nil)
+		let update = PostLikeUpdate(
+			postID: post.id,
+			isLiked: true,
+			likeCount: 2
+		)
+		let client = SocialFeedServiceSpy(
+			results: [.success(page)],
+			likeResults: [.success(update)]
+		)
+		let viewModel = FeedViewModel(client: client)
+
+		await viewModel.load()
+		await viewModel.toggleLike(postID: post.id)
+
+		var likedPost = post
+		likedPost.isLiked = true
+		likedPost.likeCount = 2
+		#expect(
+			viewModel.state
+				== .loaded(
+					content: FeedViewModel.FeedContent(
+						posts: [likedPost],
+						nextCursor: nil
+					)
+				)
+		)
+		let likeRequests = await client.recordedLikeRequests()
+		#expect(
+			likeRequests == [
+				SocialFeedLikeRequest(postID: post.id, isLiked: true)
+			]
+		)
+	}
 }
 
 private actor SocialFeedServiceSpy: SocialFeedServicing {
 	private var results: [Result<SocialFeedPage, TestError>]
+	private var likeResults: [Result<PostLikeUpdate, TestError>]
 	private var requests: [SocialFeedRequest] = []
+	private var likeRequests: [SocialFeedLikeRequest] = []
 
-	init(results: [Result<SocialFeedPage, TestError>]) {
+	init(
+		results: [Result<SocialFeedPage, TestError>],
+		likeResults: [Result<PostLikeUpdate, TestError>] = []
+	) {
 		self.results = results
+		self.likeResults = likeResults
 	}
 
 	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
@@ -210,14 +254,35 @@ private actor SocialFeedServiceSpy: SocialFeedServicing {
 		return try results.removeFirst().get()
 	}
 
+	func setLike(postID: UUID, isLiked: Bool) async throws -> PostLikeUpdate {
+		likeRequests.append(
+			SocialFeedLikeRequest(postID: postID, isLiked: isLiked)
+		)
+
+		guard likeResults.isEmpty == false else {
+			throw TestError.missingResult
+		}
+
+		return try likeResults.removeFirst().get()
+	}
+
 	func recordedRequests() -> [SocialFeedRequest] {
 		requests
+	}
+
+	func recordedLikeRequests() -> [SocialFeedLikeRequest] {
+		likeRequests
 	}
 }
 
 private nonisolated struct SocialFeedRequest: Equatable, Sendable {
 	let cursor: String?
 	let limit: Int
+}
+
+private nonisolated struct SocialFeedLikeRequest: Equatable, Sendable {
+	let postID: UUID
+	let isLiked: Bool
 }
 
 private nonisolated enum TestError: Error, Sendable {
