@@ -14,10 +14,10 @@ struct ChirpyApp: App {
 			NavigationStack {
 				FeedView(
 					viewModel: FeedViewModel(
-						client: SocialFeedClient(
-							baseURL: AppConfiguration.baseURL
-						),
-						snapshotStore: FeedSnapshotStore()
+						repository: FeedRepository(
+							client: SocialFeedClient(baseURL: AppConfiguration.baseURL),
+							snapshotStore: FeedSnapshotStore()
+						)
 					)
 				)
 			}

@@ -9,7 +9,7 @@ struct FeedViewModelTests {
 	func testLoad() async {
 		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next-page")
 		let viewModel = FeedViewModel(
-			client: SocialFeedServiceSpy(results: [.success(page)])
+			repository: FeedRepositorySpy(results: [.success(page)])
 		)
 
 		await viewModel.load()
@@ -28,7 +28,7 @@ struct FeedViewModelTests {
 	@Test
 	func testLoadError() async {
 		let viewModel = FeedViewModel(
-			client: SocialFeedServiceSpy(results: [.failure(.requestFailed)])
+			repository: FeedRepositorySpy(results: [.failure(.requestFailed)])
 		)
 
 		await viewModel.load()
@@ -51,10 +51,10 @@ struct FeedViewModelTests {
 			posts: [makePost(2)],
 			nextCursor: "new-cursor"
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [.success(initialPage), .success(refreshedPage)]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.refresh()
@@ -68,11 +68,11 @@ struct FeedViewModelTests {
 					)
 				)
 		)
-		let requests = await client.recordedRequests()
+		let requests = await repository.recordedRequests()
 		#expect(
 			requests == [
-				SocialFeedRequest(cursor: nil, limit: 20),
-				SocialFeedRequest(cursor: nil, limit: 20)
+				FeedRequest(limit: 20, cursor: nil),
+				FeedRequest(limit: 20, cursor: nil)
 			]
 		)
 	}
@@ -83,10 +83,10 @@ struct FeedViewModelTests {
 			posts: [makePost(1)],
 			nextCursor: "next-page"
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [.success(initialPage), .failure(.requestFailed)]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.refresh()
@@ -105,14 +105,14 @@ struct FeedViewModelTests {
 			posts: [makePost(2)],
 			nextCursor: "new-cursor"
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [
 				.success(initialPage),
 				.failure(.requestFailed),
 				.success(refreshedPage)
 			]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.refresh()
@@ -135,11 +135,10 @@ struct FeedViewModelTests {
 			posts: [makePost(1)],
 			nextCursor: "cached-cursor"
 		)
-		let savedAt = Date(timeIntervalSince1970: 1_000)
 		let viewModel = FeedViewModel(
-			client: SocialFeedServiceSpy(results: [.failure(.requestFailed)]),
-			snapshotStore: FeedSnapshotStoreSpy(
-				snapshot: FeedSnapshot(page: cachedPage, savedAt: savedAt)
+			repository: FeedRepositorySpy(
+				results: [.failure(.requestFailed)],
+				cachedPage: cachedPage
 			)
 		)
 
@@ -163,18 +162,10 @@ struct FeedViewModelTests {
 			nextCursor: "cached-cursor"
 		)
 		let viewModel = FeedViewModel(
-			client: SocialFeedServiceSpy(results: []),
-			snapshotStore: FeedSnapshotStoreSpy(
-				snapshot: FeedSnapshot(
-					page: cachedPage,
-					savedAt: Date(timeIntervalSince1970: 1_000)
-				)
-			)
+			repository: FeedRepositorySpy(results: [.failure(.cancelled)], cachedPage: cachedPage)
 		)
 
-		let load = Task { await viewModel.load() }
-		load.cancel()
-		await load.value
+		await viewModel.load()
 
 		#expect(
 			viewModel.state
@@ -188,17 +179,30 @@ struct FeedViewModelTests {
 	}
 
 	@Test
-	func testLoadSavesSnapshotOfFirstPage() async {
-		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next-page")
-		let store = FeedSnapshotStoreSpy()
+	func testFreshPageReplacesCachedPosts() async {
+		let cached = SocialFeedPage(posts: [makePost(1)], nextCursor: "cached")
+		let fresh = SocialFeedPage(posts: [makePost(2)], nextCursor: "fresh")
 		let viewModel = FeedViewModel(
-			client: SocialFeedServiceSpy(results: [.success(page)]),
-			snapshotStore: store
+			repository: FeedRepositorySpy(
+				results: [.success(fresh)],
+				cachedPage: cached
+			)
 		)
 
 		await viewModel.load()
 
-		#expect(await store.recordedSaves().map(\.page) == [page])
+		#expect(loadedContent(viewModel)?.posts == fresh.posts)
+		#expect(loadedContent(viewModel)?.nextCursor == fresh.nextCursor)
+	}
+
+	@Test
+	func testCancelledLoadWithoutPostsReturnsToIdle() async {
+		let viewModel = FeedViewModel(repository: FeedRepositorySpy(results: []))
+		let load = Task { await viewModel.load() }
+		load.cancel()
+		await load.value
+
+		#expect(viewModel.state == .idle)
 	}
 
 	@Test
@@ -213,10 +217,10 @@ struct FeedViewModelTests {
 			posts: [secondPost],
 			nextCursor: nil
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [.success(firstPage), .success(secondPage)]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.loadNextPage()
@@ -230,8 +234,8 @@ struct FeedViewModelTests {
 					)
 				)
 		)
-		let requests = await client.recordedRequests()
-		#expect(requests.last == SocialFeedRequest(cursor: "page-two", limit: 20))
+		let requests = await repository.recordedRequests()
+		#expect(requests.last == FeedRequest(limit: 20, cursor: "page-two"))
 	}
 
 	@Test
@@ -241,10 +245,10 @@ struct FeedViewModelTests {
 			posts: [firstPost],
 			nextCursor: "page-two"
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [.success(firstPage), .failure(.requestFailed)]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.loadNextPage()
@@ -272,24 +276,24 @@ struct FeedViewModelTests {
 			posts: [nextPost],
 			nextCursor: nil
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [.success(firstPage), .success(secondPage)]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.loadMoreIfNeeded(after: initialPosts[0])
 
-		let requestsBeforeThreshold = await client.recordedRequests()
+		let requestsBeforeThreshold = await repository.recordedRequests()
 		#expect(requestsBeforeThreshold.count == 1)
 
 		await viewModel.loadMoreIfNeeded(after: initialPosts[1])
 
-		let requestsAfterThreshold = await client.recordedRequests()
+		let requestsAfterThreshold = await repository.recordedRequests()
 		#expect(
 			requestsAfterThreshold == [
-				SocialFeedRequest(cursor: nil, limit: 20),
-				SocialFeedRequest(cursor: "page-two", limit: 20)
+				FeedRequest(limit: 20, cursor: nil),
+				FeedRequest(limit: 20, cursor: "page-two")
 			]
 		)
 	}
@@ -303,11 +307,11 @@ struct FeedViewModelTests {
 			isLiked: true,
 			likeCount: 2
 		)
-		let client = SocialFeedServiceSpy(
+		let repository = FeedRepositorySpy(
 			results: [.success(page)],
 			likeResults: [.success(update)]
 		)
-		let viewModel = FeedViewModel(client: client)
+		let viewModel = FeedViewModel(repository: repository)
 
 		await viewModel.load()
 		await viewModel.toggleLike(postID: post.id)
@@ -324,7 +328,7 @@ struct FeedViewModelTests {
 					)
 				)
 		)
-		let likeRequests = await client.recordedLikeRequests()
+		let likeRequests = await repository.recordedLikeRequests()
 		#expect(
 			likeRequests == [
 				SocialFeedLikeRequest(postID: post.id, isLiked: true)
@@ -343,49 +347,40 @@ private func loadedContent(
 	return content
 }
 
-private actor FeedSnapshotStoreSpy: FeedSnapshotStoring {
-	private var snapshot: FeedSnapshot?
-	private var saves: [FeedSnapshot] = []
-
-	init(snapshot: FeedSnapshot? = nil) {
-		self.snapshot = snapshot
-	}
-
-	func loadSnapshot() async -> FeedSnapshot? {
-		snapshot
-	}
-
-	func save(snapshot: FeedSnapshot) async {
-		self.snapshot = snapshot
-		saves.append(snapshot)
-	}
-
-	func removeSnapshot() async {
-		snapshot = nil
-	}
-
-	func recordedSaves() -> [FeedSnapshot] {
-		saves
-	}
-}
-
-private actor SocialFeedServiceSpy: SocialFeedServicing {
+private actor FeedRepositorySpy: FeedRepositoryProtocol {
+	private let cachedPage: SocialFeedPage?
 	private var results: [Result<SocialFeedPage, TestError>]
 	private var likeResults: [Result<PostLikeUpdate, TestError>]
-	private var requests: [SocialFeedRequest] = []
+	private var requests: [FeedRequest] = []
 	private var likeRequests: [SocialFeedLikeRequest] = []
 
 	init(
 		results: [Result<SocialFeedPage, TestError>],
-		likeResults: [Result<PostLikeUpdate, TestError>] = []
+		likeResults: [Result<PostLikeUpdate, TestError>] = [],
+		cachedPage: SocialFeedPage? = nil
 	) {
+		self.cachedPage = cachedPage
 		self.results = results
 		self.likeResults = likeResults
 	}
 
-	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
+	nonisolated func pages(limit: Int, cursor: String?) -> AsyncThrowingStream<SocialFeedPage, Error> {
+		let sequence = FirstPageSequence(
+			cachedPage: cursor == nil ? cachedPage : nil,
+			repository: self,
+			limit: limit,
+			cursor: cursor
+		)
+		return AsyncThrowingStream(unfolding: { try await sequence.next() })
+	}
+
+	func fetchPage(limit: Int, cursor: String?) async throws -> SocialFeedPage {
+		try fetchPage(request: FeedRequest(limit: limit, cursor: cursor))
+	}
+
+	private func fetchPage(request: FeedRequest) throws -> SocialFeedPage {
 		try Task.checkCancellation()
-		requests.append(SocialFeedRequest(cursor: cursor, limit: limit))
+		requests.append(request)
 
 		guard results.isEmpty == false else {
 			throw TestError.missingResult
@@ -394,6 +389,8 @@ private actor SocialFeedServiceSpy: SocialFeedServicing {
 		switch results.removeFirst() {
 		case .success(let page):
 			return page
+		case .failure(.cancelled):
+			throw CancellationError()
 		case .failure(let error):
 			throw error
 		}
@@ -411,7 +408,7 @@ private actor SocialFeedServiceSpy: SocialFeedServicing {
 		return try likeResults.removeFirst().get()
 	}
 
-	func recordedRequests() -> [SocialFeedRequest] {
+	func recordedRequests() -> [FeedRequest] {
 		requests
 	}
 
@@ -420,9 +417,9 @@ private actor SocialFeedServiceSpy: SocialFeedServicing {
 	}
 }
 
-private nonisolated struct SocialFeedRequest: Equatable, Sendable {
-	let cursor: String?
+private nonisolated struct FeedRequest: Equatable, Sendable {
 	let limit: Int
+	let cursor: String?
 }
 
 private nonisolated struct SocialFeedLikeRequest: Equatable, Sendable {
@@ -433,6 +430,7 @@ private nonisolated struct SocialFeedLikeRequest: Equatable, Sendable {
 private nonisolated enum TestError: Error, Sendable {
 	case missingResult
 	case requestFailed
+	case cancelled
 }
 
 private nonisolated func makePost(_ id: UInt8) -> Post {
@@ -450,4 +448,30 @@ private nonisolated func makePost(_ id: UInt8) -> Post {
 		isLiked: false,
 		likeCount: Int(id)
 	)
+}
+
+/// Pull-driven test sequence keeps the view-model tests independent of stream production.
+private actor FirstPageSequence {
+	private var cachedPage: SocialFeedPage?
+	private var fetched = false
+	private let repository: FeedRepositorySpy
+	private let limit: Int
+	private let cursor: String?
+
+	init(cachedPage: SocialFeedPage?, repository: FeedRepositorySpy, limit: Int, cursor: String?) {
+		self.cachedPage = cachedPage
+		self.repository = repository
+		self.limit = limit
+		self.cursor = cursor
+	}
+
+	func next() async throws -> SocialFeedPage? {
+		if let cachedPage {
+			self.cachedPage = nil
+			return cachedPage
+		}
+		guard fetched == false else { return nil }
+		fetched = true
+		return try await repository.fetchPage(limit: limit, cursor: cursor)
+	}
 }

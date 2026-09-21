@@ -23,6 +23,7 @@ struct FeedSnapshotStoreTests {
 		let store = FeedSnapshotStore(directory: directory)
 		let snapshot = FeedSnapshot(
 			page: makePage(),
+			limit: 20,
 			savedAt: recentWholeSecond()
 		)
 
@@ -44,6 +45,7 @@ struct FeedSnapshotStoreTests {
 		await store.save(
 			snapshot: FeedSnapshot(
 				page: makePage(),
+				limit: 20,
 				savedAt: Date.now.addingTimeInterval(-2 * 60 * 60)
 			)
 		)
@@ -65,6 +67,7 @@ struct FeedSnapshotStoreTests {
 		await store.save(
 			snapshot: FeedSnapshot(
 				page: makePage(),
+				limit: 20,
 				savedAt: Date.now.addingTimeInterval(-60)
 			)
 		)
@@ -84,6 +87,7 @@ struct FeedSnapshotStoreTests {
 		await store.save(
 			snapshot: FeedSnapshot(
 				page: makePage(),
+				limit: 20,
 				savedAt: Date.now.addingTimeInterval(60 * 60)
 			)
 		)
@@ -111,6 +115,24 @@ struct FeedSnapshotStoreTests {
 	}
 
 	@Test
+	func discardsLegacySnapshotWithoutRequestedLimit() async throws {
+		let directory = makeTemporaryDirectory()
+		defer { removeTemporaryDirectory(directory) }
+		let snapshot = FeedSnapshot(page: makePage(), limit: 20, savedAt: recentWholeSecond())
+		let encoder = JSONEncoder()
+		encoder.dateEncodingStrategy = .iso8601
+		var payload = try #require(
+			JSONSerialization.jsonObject(with: encoder.encode(snapshot)) as? [String: Any]
+		)
+		payload.removeValue(forKey: "limit")
+		let data = try JSONSerialization.data(withJSONObject: payload)
+		try data.write(to: directory.appending(path: snapshotFileName))
+
+		#expect(await FeedSnapshotStore(directory: directory).loadSnapshot() == nil)
+		#expect(snapshotFileExists(in: directory) == false)
+	}
+
+	@Test
 	func discardsACorruptSnapshot() async {
 		let directory = makeTemporaryDirectory()
 		defer { removeTemporaryDirectory(directory) }
@@ -129,7 +151,7 @@ struct FeedSnapshotStoreTests {
 		defer { removeTemporaryDirectory(directory) }
 
 		let store = FeedSnapshotStore(directory: directory)
-		await store.save(snapshot: FeedSnapshot(page: makePage()))
+		await store.save(snapshot: FeedSnapshot(page: makePage(), limit: 20))
 
 		await store.removeSnapshot()
 
@@ -174,9 +196,10 @@ private func snapshotFileExists(in directory: URL) -> Bool {
 }
 
 private func write(_ contents: String, to directory: URL) {
-	try? Data(contents.utf8).write(
-		to: directory.appending(path: snapshotFileName)
-	)
+	try? Data(contents.utf8)
+		.write(
+			to: directory.appending(path: snapshotFileName)
+		)
 }
 
 /// A current timestamp truncated to a whole second.

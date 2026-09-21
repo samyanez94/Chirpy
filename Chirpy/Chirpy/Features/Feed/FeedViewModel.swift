@@ -27,9 +27,7 @@ final class FeedViewModel {
 
 	private static let pageSize = 20
 
-	private let client: any SocialFeedServicing
-
-	private let snapshotStore: any FeedSnapshotStoring
+	private let repository: any FeedRepositoryProtocol
 
 	private(set) var state: State = .idle
 
@@ -39,12 +37,8 @@ final class FeedViewModel {
 	@ObservationIgnored
 	private var isFetchingFirstPage = false
 
-	init(
-		client: any SocialFeedServicing,
-		snapshotStore: any FeedSnapshotStoring = StubFeedSnapshotStore()
-	) {
-		self.client = client
-		self.snapshotStore = snapshotStore
+	init(repository: any FeedRepositoryProtocol) {
+		self.repository = repository
 	}
 
 	/// Loads the first page of posts when the feed is idle.
@@ -60,26 +54,21 @@ final class FeedViewModel {
 			isFetchingFirstPage = false
 		}
 
-		var isShowingCachedPosts = false
-
-		if let snapshot = await snapshotStore.loadSnapshot(),
-			case .loading = state
-		{
-			isShowingCachedPosts = true
-			state = .loaded(content: snapshot.page.feedContent)
-		}
-
 		do {
-			try await fetchFirstPage()
-		} catch is CancellationError {
-			if isShowingCachedPosts == false {
-				state = .idle
+			for try await page in repository.pages(limit: Self.pageSize, cursor: nil) {
+				try Task.checkCancellation()
+				state = .loaded(content: page.feedContent)
 			}
+			// Stream cancellation can end iteration normally instead of throwing.
+			try Task.checkCancellation()
 		} catch {
-			if isShowingCachedPosts == false {
-				state = .error(
-					message: "The feed couldn’t be loaded."
-				)
+			guard case .loading = state else {
+				return
+			}
+			if error is CancellationError || Task.isCancelled {
+				state = .idle
+			} else {
+				state = .error(message: "The feed couldn’t be loaded.")
 			}
 		}
 	}
@@ -142,10 +131,7 @@ final class FeedViewModel {
 		}
 
 		do {
-			let page = try await client.fetchPage(
-				cursor: cursor,
-				limit: Self.pageSize
-			)
+			let page = try await repository.fetchPage(limit: Self.pageSize, cursor: cursor)
 
 			updateContent(expectedCursor: cursor) { content in
 				let existingIDs = Set(content.posts.map(\.id))
@@ -215,7 +201,7 @@ final class FeedViewModel {
 		}
 
 		do {
-			let update = try await client.setLike(
+			let update = try await repository.setLike(
 				postID: postID,
 				isLiked: post.isLiked == false
 			)
@@ -254,14 +240,10 @@ final class FeedViewModel {
 		state = .loaded(content: content)
 	}
 
-	/// Fetches, publishes, and stores the first page.
+	/// Fetches and publishes the first page.
 	private func fetchFirstPage() async throws {
-		let page = try await client.fetchPage(
-			cursor: nil,
-			limit: Self.pageSize
-		)
+		let page = try await repository.fetchPage(limit: Self.pageSize, cursor: nil)
 		state = .loaded(content: page.feedContent)
-		await snapshotStore.save(snapshot: FeedSnapshot(page: page))
 	}
 }
 

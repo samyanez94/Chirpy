@@ -43,10 +43,13 @@ actor FeedSnapshotStore: FeedSnapshotStoring {
 			return nil
 		}
 
-		guard let snapshot = try? Self.makeDecoder().decode(
-			FeedSnapshot.self,
-			from: data
-		) else {
+		guard
+			let snapshot = try? Self.makeDecoder()
+				.decode(
+					FeedSnapshot.self,
+					from: data
+				)
+		else {
 			discardSnapshot(because: "its contents could not be decoded")
 			return nil
 		}
