@@ -14,22 +14,27 @@ struct PreviewFeedClient: FeedServicing {
 		cursor: String?,
 		limit: Int
 	) async throws -> SocialFeedPage {
-		switch result {
-		case .success(let page):
-			return page
-		case .failure(let error):
-			throw error
-		}
+		try result.get()
 	}
 
 	func setLike(
 		postID: UUID,
 		isLiked: Bool
 	) async throws -> PostLikeUpdate {
-		PostLikeUpdate(
-			postID: UUID(),
-			isLiked: false,
-			likeCount: 0
+		let page = try result.get()
+		guard let post = page.posts.first(where: { $0.id == postID }) else {
+			throw PreviewError.requestFailed
+		}
+
+		var likeCount = post.likeCount
+		if isLiked != post.isLiked {
+			likeCount += isLiked ? 1 : -1
+		}
+
+		return PostLikeUpdate(
+			postID: postID,
+			isLiked: isLiked,
+			likeCount: max(0, likeCount)
 		)
 	}
 }
@@ -41,6 +46,6 @@ enum PreviewError: Error {
 extension SocialFeedPage {
 	static let preview = SocialFeedPage(
 		posts: [.preview],
-		nextCursor: "next-page"
+		nextCursor: nil
 	)
 }
