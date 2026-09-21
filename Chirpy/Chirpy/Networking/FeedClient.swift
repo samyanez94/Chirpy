@@ -1,5 +1,5 @@
 //
-//  SocialFeedClient.swift
+//  FeedClient.swift
 //  Chirpy
 //
 //  Created by Samuel Yanez on 8/31/26.
@@ -7,9 +7,9 @@
 
 import Foundation
 
-// MARK: - SocialFeedServicing
+// MARK: - FeedServicing
 
-nonisolated protocol SocialFeedServicing: Sendable {
+nonisolated protocol FeedServicing: Sendable {
 	func fetchPage(
 		cursor: String?,
 		limit: Int
@@ -21,9 +21,9 @@ nonisolated protocol SocialFeedServicing: Sendable {
 	) async throws -> PostLikeUpdate
 }
 
-// MARK: - SocialFeedClient
+// MARK: - FeedClient
 
-nonisolated struct SocialFeedClient: SocialFeedServicing {
+nonisolated struct FeedClient: FeedServicing {
 
 	private let baseURL: URL
 
@@ -47,6 +47,7 @@ nonisolated struct SocialFeedClient: SocialFeedServicing {
 		cursor: String? = nil,
 		limit: Int = 20
 	) async throws -> SocialFeedPage {
+		try Task.checkCancellation()
 		var components = URLComponents(
 			url: baseURL.appending(path: "functions/v1/social-feed/feed"),
 			resolvingAgainstBaseURL: false
@@ -63,6 +64,7 @@ nonisolated struct SocialFeedClient: SocialFeedServicing {
 		}
 
 		let (data, response) = try await httpClient.send(request: URLRequest(url: url))
+		try Task.checkCancellation()
 
 		guard let response = response as? HTTPURLResponse else {
 			throw URLError(.badServerResponse)

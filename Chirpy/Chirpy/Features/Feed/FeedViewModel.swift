@@ -27,7 +27,7 @@ final class FeedViewModel {
 
 	private static let pageSize = 20
 
-	private let repository: any FeedRepositoryProtocol
+	private let client: any FeedServicing
 
 	private(set) var state: State = .idle
 
@@ -37,8 +37,8 @@ final class FeedViewModel {
 	@ObservationIgnored
 	private var isFetchingFirstPage = false
 
-	init(repository: any FeedRepositoryProtocol) {
-		self.repository = repository
+	init(client: any FeedServicing) {
+		self.client = client
 	}
 
 	/// Loads the first page of posts when the feed is idle.
@@ -123,7 +123,7 @@ final class FeedViewModel {
 		}
 
 		do {
-			let page = try await repository.fetchPage(limit: Self.pageSize, cursor: cursor)
+			let page = try await client.fetchPage(cursor: cursor, limit: Self.pageSize)
 
 			updateContent(expectedCursor: cursor) { content in
 				let existingIDs = Set(content.posts.map(\.id))
@@ -193,7 +193,7 @@ final class FeedViewModel {
 		}
 
 		do {
-			let update = try await repository.setLike(
+			let update = try await client.setLike(
 				postID: postID,
 				isLiked: post.isLiked == false
 			)
@@ -234,7 +234,7 @@ final class FeedViewModel {
 
 	/// Fetches and publishes the first page.
 	private func fetchFirstPage() async throws {
-		let page = try await repository.fetchPage(limit: Self.pageSize, cursor: nil)
+		let page = try await client.fetchPage(cursor: nil, limit: Self.pageSize)
 		try Task.checkCancellation()
 		state = .loaded(content: page.feedContent)
 	}

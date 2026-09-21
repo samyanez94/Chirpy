@@ -9,7 +9,7 @@ struct FeedViewModelTests {
 	func testLoad() async {
 		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next-page")
 		let viewModel = FeedViewModel(
-			repository: FeedRepositorySpy(results: [.success(page)])
+			client: FeedClientSpy(results: [.success(page)])
 		)
 
 		await viewModel.load()
@@ -28,7 +28,7 @@ struct FeedViewModelTests {
 	@Test
 	func testLoadError() async {
 		let viewModel = FeedViewModel(
-			repository: FeedRepositorySpy(results: [.failure(.requestFailed)])
+			client: FeedClientSpy(results: [.failure(.requestFailed)])
 		)
 
 		await viewModel.load()
@@ -51,10 +51,10 @@ struct FeedViewModelTests {
 			posts: [makePost(2)],
 			nextCursor: "new-cursor"
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [.success(initialPage), .success(refreshedPage)]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.refresh()
@@ -68,7 +68,7 @@ struct FeedViewModelTests {
 					)
 				)
 		)
-		let requests = await repository.recordedRequests()
+		let requests = await client.recordedRequests()
 		#expect(
 			requests == [
 				FeedRequest(limit: 20, cursor: nil),
@@ -83,10 +83,10 @@ struct FeedViewModelTests {
 			posts: [makePost(1)],
 			nextCursor: "next-page"
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [.success(initialPage), .failure(.requestFailed)]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.refresh()
@@ -105,14 +105,14 @@ struct FeedViewModelTests {
 			posts: [makePost(2)],
 			nextCursor: "new-cursor"
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [
 				.success(initialPage),
 				.failure(.requestFailed),
 				.success(refreshedPage)
 			]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.refresh()
@@ -133,7 +133,7 @@ struct FeedViewModelTests {
 	func testRetryAfterLoadFailure() async {
 		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next")
 		let viewModel = FeedViewModel(
-			repository: FeedRepositorySpy(
+			client: FeedClientSpy(
 				results: [.failure(.requestFailed), .success(page)]
 			)
 		)
@@ -147,7 +147,7 @@ struct FeedViewModelTests {
 
 	@Test
 	func testCancelledLoadWithoutPostsReturnsToIdle() async {
-		let viewModel = FeedViewModel(repository: FeedRepositorySpy(results: []))
+		let viewModel = FeedViewModel(client: FeedClientSpy(results: []))
 		let load = Task { await viewModel.load() }
 		load.cancel()
 		await load.value
@@ -167,10 +167,10 @@ struct FeedViewModelTests {
 			posts: [secondPost],
 			nextCursor: nil
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [.success(firstPage), .success(secondPage)]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.loadNextPage()
@@ -184,7 +184,7 @@ struct FeedViewModelTests {
 					)
 				)
 		)
-		let requests = await repository.recordedRequests()
+		let requests = await client.recordedRequests()
 		#expect(requests.last == FeedRequest(limit: 20, cursor: "page-two"))
 	}
 
@@ -195,10 +195,10 @@ struct FeedViewModelTests {
 			posts: [firstPost],
 			nextCursor: "page-two"
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [.success(firstPage), .failure(.requestFailed)]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.loadNextPage()
@@ -226,20 +226,20 @@ struct FeedViewModelTests {
 			posts: [nextPost],
 			nextCursor: nil
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [.success(firstPage), .success(secondPage)]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.loadMoreIfNeeded(after: initialPosts[0])
 
-		let requestsBeforeThreshold = await repository.recordedRequests()
+		let requestsBeforeThreshold = await client.recordedRequests()
 		#expect(requestsBeforeThreshold.count == 1)
 
 		await viewModel.loadMoreIfNeeded(after: initialPosts[1])
 
-		let requestsAfterThreshold = await repository.recordedRequests()
+		let requestsAfterThreshold = await client.recordedRequests()
 		#expect(
 			requestsAfterThreshold == [
 				FeedRequest(limit: 20, cursor: nil),
@@ -257,11 +257,11 @@ struct FeedViewModelTests {
 			isLiked: true,
 			likeCount: 2
 		)
-		let repository = FeedRepositorySpy(
+		let client = FeedClientSpy(
 			results: [.success(page)],
 			likeResults: [.success(update)]
 		)
-		let viewModel = FeedViewModel(repository: repository)
+		let viewModel = FeedViewModel(client: client)
 
 		await viewModel.load()
 		await viewModel.toggleLike(postID: post.id)
@@ -278,10 +278,10 @@ struct FeedViewModelTests {
 					)
 				)
 		)
-		let likeRequests = await repository.recordedLikeRequests()
+		let likeRequests = await client.recordedLikeRequests()
 		#expect(
 			likeRequests == [
-				SocialFeedLikeRequest(postID: post.id, isLiked: true)
+				FeedLikeRequest(postID: post.id, isLiked: true)
 			]
 		)
 	}
@@ -297,11 +297,11 @@ private func loadedContent(
 	return content
 }
 
-private actor FeedRepositorySpy: FeedRepositoryProtocol {
+private actor FeedClientSpy: FeedServicing {
 	private var results: [Result<SocialFeedPage, TestError>]
 	private var likeResults: [Result<PostLikeUpdate, TestError>]
 	private var requests: [FeedRequest] = []
-	private var likeRequests: [SocialFeedLikeRequest] = []
+	private var likeRequests: [FeedLikeRequest] = []
 
 	init(
 		results: [Result<SocialFeedPage, TestError>],
@@ -311,7 +311,7 @@ private actor FeedRepositorySpy: FeedRepositoryProtocol {
 		self.likeResults = likeResults
 	}
 
-	func fetchPage(limit: Int, cursor: String?) async throws -> SocialFeedPage {
+	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
 		try fetchPage(request: FeedRequest(limit: limit, cursor: cursor))
 	}
 
@@ -333,7 +333,7 @@ private actor FeedRepositorySpy: FeedRepositoryProtocol {
 
 	func setLike(postID: UUID, isLiked: Bool) async throws -> PostLikeUpdate {
 		likeRequests.append(
-			SocialFeedLikeRequest(postID: postID, isLiked: isLiked)
+			FeedLikeRequest(postID: postID, isLiked: isLiked)
 		)
 
 		guard likeResults.isEmpty == false else {
@@ -347,7 +347,7 @@ private actor FeedRepositorySpy: FeedRepositoryProtocol {
 		requests
 	}
 
-	func recordedLikeRequests() -> [SocialFeedLikeRequest] {
+	func recordedLikeRequests() -> [FeedLikeRequest] {
 		likeRequests
 	}
 }
@@ -357,7 +357,7 @@ private nonisolated struct FeedRequest: Equatable, Sendable {
 	let cursor: String?
 }
 
-private nonisolated struct SocialFeedLikeRequest: Equatable, Sendable {
+private nonisolated struct FeedLikeRequest: Equatable, Sendable {
 	let postID: UUID
 	let isLiked: Bool
 }

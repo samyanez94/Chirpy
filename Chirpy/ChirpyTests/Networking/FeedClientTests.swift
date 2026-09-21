@@ -1,5 +1,5 @@
 //
-//  SocialFeedClientTests.swift
+//  FeedClientTests.swift
 //  ChirpyTests
 //
 //  Created by Samuel Yanez on 8/31/26.
@@ -10,7 +10,7 @@ import Testing
 
 @testable import Chirpy
 
-struct SocialFeedClientTests {
+struct FeedClientTests {
 	@Test func testFetchPage() async throws {
 		let fixtureURL = try #require(
 			Bundle(for: NetworkingTestBundleToken.self)
@@ -29,7 +29,7 @@ struct SocialFeedClientTests {
 				headerFields: nil
 			)
 		)
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: data, response: response)
 		)
@@ -45,7 +45,7 @@ struct SocialFeedClientTests {
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 200)
 		let recorder = RequestRecorder()
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(
 				data: data,
@@ -73,7 +73,7 @@ struct SocialFeedClientTests {
 		let data = try fixtureData(named: "service-unavailable-error")
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 503)
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: data, response: response)
 		)
@@ -98,7 +98,7 @@ struct SocialFeedClientTests {
 			expectedContentLength: 0,
 			textEncodingName: nil
 		)
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: Data(), response: response)
 		)
@@ -117,7 +117,7 @@ struct SocialFeedClientTests {
 		let data = try fixtureData(named: "post-like-update")
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 200)
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: data, response: response)
 		)
@@ -137,7 +137,7 @@ struct SocialFeedClientTests {
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 200)
 		let recorder = RequestRecorder()
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(
 				data: data,
@@ -165,7 +165,7 @@ struct SocialFeedClientTests {
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 200)
 		let recorder = RequestRecorder()
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(
 				data: data,
@@ -192,7 +192,7 @@ struct SocialFeedClientTests {
 		let data = try fixtureData(named: "service-unavailable-error")
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 503)
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: data, response: response)
 		)
@@ -221,7 +221,7 @@ struct SocialFeedClientTests {
 			expectedContentLength: 0,
 			textEncodingName: nil
 		)
-		let client = SocialFeedClient(
+		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: Data(), response: response)
 		)

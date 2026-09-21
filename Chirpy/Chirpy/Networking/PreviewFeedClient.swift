@@ -1,5 +1,5 @@
 //
-//  PreviewSocialFeedClient.swift
+//  PreviewFeedClient.swift
 //  Chirpy
 //
 //  Created by Samuel Yanez on 9/1/26.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct PreviewSocialFeedClient: SocialFeedServicing {
+struct PreviewFeedClient: FeedServicing {
 	let result: Result<SocialFeedPage, PreviewError>
 
 	func fetchPage(
