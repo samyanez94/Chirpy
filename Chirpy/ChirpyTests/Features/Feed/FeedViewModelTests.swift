@@ -130,69 +130,19 @@ struct FeedViewModelTests {
 	}
 
 	@Test
-	func testLoadFallsBackToCachedPostsWhenRequestFails() async {
-		let cachedPage = SocialFeedPage(
-			posts: [makePost(1)],
-			nextCursor: "cached-cursor"
-		)
+	func testRetryAfterLoadFailure() async {
+		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next")
 		let viewModel = FeedViewModel(
 			repository: FeedRepositorySpy(
-				results: [.failure(.requestFailed)],
-				cachedPage: cachedPage
+				results: [.failure(.requestFailed), .success(page)]
 			)
 		)
 
 		await viewModel.load()
+		await viewModel.retry()
 
-		#expect(
-			viewModel.state
-				== .loaded(
-					content: FeedViewModel.FeedContent(
-						posts: cachedPage.posts,
-						nextCursor: cachedPage.nextCursor
-					)
-				)
-		)
-	}
-
-	@Test
-	func testCancelledLoadKeepsCachedPosts() async {
-		let cachedPage = SocialFeedPage(
-			posts: [makePost(1)],
-			nextCursor: "cached-cursor"
-		)
-		let viewModel = FeedViewModel(
-			repository: FeedRepositorySpy(results: [.failure(.cancelled)], cachedPage: cachedPage)
-		)
-
-		await viewModel.load()
-
-		#expect(
-			viewModel.state
-				== .loaded(
-					content: FeedViewModel.FeedContent(
-						posts: cachedPage.posts,
-						nextCursor: cachedPage.nextCursor
-					)
-				)
-		)
-	}
-
-	@Test
-	func testFreshPageReplacesCachedPosts() async {
-		let cached = SocialFeedPage(posts: [makePost(1)], nextCursor: "cached")
-		let fresh = SocialFeedPage(posts: [makePost(2)], nextCursor: "fresh")
-		let viewModel = FeedViewModel(
-			repository: FeedRepositorySpy(
-				results: [.success(fresh)],
-				cachedPage: cached
-			)
-		)
-
-		await viewModel.load()
-
-		#expect(loadedContent(viewModel)?.posts == fresh.posts)
-		#expect(loadedContent(viewModel)?.nextCursor == fresh.nextCursor)
+		#expect(loadedContent(viewModel)?.posts == page.posts)
+		#expect(loadedContent(viewModel)?.nextCursor == page.nextCursor)
 	}
 
 	@Test
@@ -348,7 +298,6 @@ private func loadedContent(
 }
 
 private actor FeedRepositorySpy: FeedRepositoryProtocol {
-	private let cachedPage: SocialFeedPage?
 	private var results: [Result<SocialFeedPage, TestError>]
 	private var likeResults: [Result<PostLikeUpdate, TestError>]
 	private var requests: [FeedRequest] = []
@@ -356,22 +305,10 @@ private actor FeedRepositorySpy: FeedRepositoryProtocol {
 
 	init(
 		results: [Result<SocialFeedPage, TestError>],
-		likeResults: [Result<PostLikeUpdate, TestError>] = [],
-		cachedPage: SocialFeedPage? = nil
+		likeResults: [Result<PostLikeUpdate, TestError>] = []
 	) {
-		self.cachedPage = cachedPage
 		self.results = results
 		self.likeResults = likeResults
-	}
-
-	nonisolated func pages(limit: Int, cursor: String?) -> AsyncThrowingStream<SocialFeedPage, Error> {
-		let sequence = FirstPageSequence(
-			cachedPage: cursor == nil ? cachedPage : nil,
-			repository: self,
-			limit: limit,
-			cursor: cursor
-		)
-		return AsyncThrowingStream(unfolding: { try await sequence.next() })
 	}
 
 	func fetchPage(limit: Int, cursor: String?) async throws -> SocialFeedPage {
@@ -389,8 +326,6 @@ private actor FeedRepositorySpy: FeedRepositoryProtocol {
 		switch results.removeFirst() {
 		case .success(let page):
 			return page
-		case .failure(.cancelled):
-			throw CancellationError()
 		case .failure(let error):
 			throw error
 		}
@@ -430,7 +365,6 @@ private nonisolated struct SocialFeedLikeRequest: Equatable, Sendable {
 private nonisolated enum TestError: Error, Sendable {
 	case missingResult
 	case requestFailed
-	case cancelled
 }
 
 private nonisolated func makePost(_ id: UInt8) -> Post {
@@ -448,30 +382,4 @@ private nonisolated func makePost(_ id: UInt8) -> Post {
 		isLiked: false,
 		likeCount: Int(id)
 	)
-}
-
-/// Pull-driven test sequence keeps the view-model tests independent of stream production.
-private actor FirstPageSequence {
-	private var cachedPage: SocialFeedPage?
-	private var fetched = false
-	private let repository: FeedRepositorySpy
-	private let limit: Int
-	private let cursor: String?
-
-	init(cachedPage: SocialFeedPage?, repository: FeedRepositorySpy, limit: Int, cursor: String?) {
-		self.cachedPage = cachedPage
-		self.repository = repository
-		self.limit = limit
-		self.cursor = cursor
-	}
-
-	func next() async throws -> SocialFeedPage? {
-		if let cachedPage {
-			self.cachedPage = nil
-			return cachedPage
-		}
-		guard fetched == false else { return nil }
-		fetched = true
-		return try await repository.fetchPage(limit: limit, cursor: cursor)
-	}
 }

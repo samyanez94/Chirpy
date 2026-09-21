@@ -55,16 +55,8 @@ final class FeedViewModel {
 		}
 
 		do {
-			for try await page in repository.pages(limit: Self.pageSize, cursor: nil) {
-				try Task.checkCancellation()
-				state = .loaded(content: page.feedContent)
-			}
-			// Stream cancellation can end iteration normally instead of throwing.
-			try Task.checkCancellation()
+			try await fetchFirstPage()
 		} catch {
-			guard case .loading = state else {
-				return
-			}
 			if error is CancellationError || Task.isCancelled {
 				state = .idle
 			} else {
@@ -243,6 +235,7 @@ final class FeedViewModel {
 	/// Fetches and publishes the first page.
 	private func fetchFirstPage() async throws {
 		let page = try await repository.fetchPage(limit: Self.pageSize, cursor: nil)
+		try Task.checkCancellation()
 		state = .loaded(content: page.feedContent)
 	}
 }

@@ -15,8 +15,7 @@ struct ChirpyApp: App {
 				FeedView(
 					viewModel: FeedViewModel(
 						repository: FeedRepository(
-							client: SocialFeedClient(baseURL: AppConfiguration.baseURL),
-							snapshotStore: FeedSnapshotStore()
+							client: SocialFeedClient(baseURL: AppConfiguration.baseURL)
 						)
 					)
 				)

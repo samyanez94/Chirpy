@@ -1,7 +1,7 @@
 # Chirpy
 
 Chirpy is a small social-feed iOS app for practicing modern iOS development. It is a fun sandbox for SwiftUI, Swift
-concurrency, networking, pagination, caching, and testing.
+concurrency, networking, pagination, and testing.
 
 This repo contains both the iOS app and its lightweight Supabase backend. The app talks to a single Edge Function using
 plain HTTP and JSON.
@@ -15,8 +15,9 @@ plain HTTP and JSON.
 - Shows a reverse-chronological feed
 - Loads more posts with cursor pagination
 - Likes and unlikes posts
-- Keeps a local feed snapshot around for a faster launch and an offline fallback
 - Refreshes with pull-to-refresh
+
+The feed loads from the backend on each launch. Posts already on screen stay visible if a refresh fails.
 
 The project intentionally skips accounts, post creation, replies, follows, search, notifications, and realtime updates.
 
@@ -102,7 +103,7 @@ deno lint
 ## Run the iOS tests
 
 Open the project in Xcode, pick an iPhone Simulator, and use **Product › Test** (`⌘U`). The test suite covers feed state,
-pagination, networking, and snapshot persistence.
+pagination, networking, and likes.
 
 ## A quick note on pagination
 

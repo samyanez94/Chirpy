@@ -69,8 +69,7 @@ struct FeedView: View {
 		FeedView(
 			viewModel: FeedViewModel(
 				repository: FeedRepository(
-					client: PreviewSocialFeedClient(result: .success(.preview)),
-					snapshotStore: StubFeedSnapshotStore()
+					client: PreviewSocialFeedClient(result: .success(.preview))
 				)
 			)
 		)
@@ -82,8 +81,7 @@ struct FeedView: View {
 		FeedView(
 			viewModel: FeedViewModel(
 				repository: FeedRepository(
-					client: PreviewSocialFeedClient(result: .failure(.requestFailed)),
-					snapshotStore: StubFeedSnapshotStore()
+					client: PreviewSocialFeedClient(result: .failure(.requestFailed))
 				)
 			)
 		)
