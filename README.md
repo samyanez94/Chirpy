@@ -64,14 +64,14 @@ Never add the service-role key to the iOS app or commit `.env` files.
 Serve the API:
 
 ```sh
-supabase functions serve social-feed --env-file supabase/functions/.env --no-verify-jwt
+supabase functions serve --env-file supabase/functions/.env --no-verify-jwt
 ```
 
 ## Try the API
 
 ```sh
 curl http://127.0.0.1:54321/functions/v1/social-feed/health
-curl 'http://127.0.0.1:54321/functions/v1/social-feed/feed?limit=20'
+curl 'http://127.0.0.1:54321/functions/v1/feed?limit=20'
 
 curl -X POST \
   http://127.0.0.1:54321/functions/v1/social-feed/posts/10000000-0000-4000-8000-000000000001/like
@@ -116,6 +116,7 @@ supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 supabase functions deploy social-feed --no-verify-jwt
+supabase functions deploy feed --no-verify-jwt
 supabase secrets set --env-file path/to/production.env
 ```
 

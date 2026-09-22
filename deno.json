@@ -1,7 +1,7 @@
 {
   "tasks": {
     "test": "deno test supabase/functions/social-feed",
-    "check": "deno check supabase/functions/social-feed/index.ts supabase/functions/social-feed/handler_test.ts"
+    "check": "deno check supabase/functions/feed/index.ts supabase/functions/social-feed/index.ts supabase/functions/social-feed/handler_test.ts"
   },
   "compilerOptions": {
     "strict": true

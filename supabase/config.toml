@@ -40,3 +40,6 @@ policy = "per_worker"
 
 [functions.social-feed]
 verify_jwt = false
+
+[functions.feed]
+verify_jwt = false

@@ -49,7 +49,7 @@ nonisolated struct FeedClient: FeedServicing {
 	) async throws -> SocialFeedPage {
 		try Task.checkCancellation()
 		var components = URLComponents(
-			url: baseURL.appending(path: "functions/v1/social-feed/feed"),
+			url: baseURL.appending(path: "functions/v1/feed"),
 			resolvingAgainstBaseURL: false
 		)
 

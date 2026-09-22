@@ -59,8 +59,10 @@ const equal = (actual: unknown, expected: unknown) =>
     `${JSON.stringify(actual)} != ${JSON.stringify(expected)}`,
   );
 const body = (response: Response) => response.json();
-const request = (path: string, method = "GET") =>
-  new Request(`http://localhost/functions/v1/social-feed${path}`, { method });
+const request = (path: string, method = "GET") => {
+  const prefix = path.split("?")[0] === "/feed" ? "/functions/v1" : "/functions/v1/social-feed";
+  return new Request(`http://localhost${prefix}${path}`, { method });
+};
 
 Deno.test("cursor round trips and rejects malformed or unsupported values", () => {
   const encoded = encodeCursor(rows[0].created_at, rows[0].id);

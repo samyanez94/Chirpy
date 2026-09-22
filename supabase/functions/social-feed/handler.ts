@@ -92,6 +92,7 @@ export function createHandler(repository: Repository, environment: Environment) 
 }
 
 function normalizedPath(path: string): string {
+  if (path === "/functions/v1/feed" || path === "/functions/v1/feed/") return "/feed";
   const marker = "/social-feed";
   const index = path.indexOf(marker);
   const result = index >= 0 ? path.slice(index + marker.length) : path;

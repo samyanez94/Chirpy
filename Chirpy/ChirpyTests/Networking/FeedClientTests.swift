@@ -64,7 +64,7 @@ struct FeedClientTests {
 		)
 
 		#expect(request.httpMethod == "GET")
-		#expect(components.path == "/functions/v1/social-feed/feed")
+		#expect(components.path == "/functions/v1/feed")
 		#expect(components.queryItems?.first { $0.name == "limit" }?.value == "10")
 		#expect(components.queryItems?.first { $0.name == "cursor" }?.value == "opaque cursor/+")
 	}
