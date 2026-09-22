@@ -43,3 +43,6 @@ verify_jwt = false
 
 [functions.feed]
 verify_jwt = false
+
+[functions.posts]
+verify_jwt = false

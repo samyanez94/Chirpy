@@ -156,7 +156,7 @@ struct FeedClientTests {
 		#expect(request.httpMethod == "POST")
 		#expect(
 			request.url?.path
-				== "/functions/v1/social-feed/posts/\(postID)/like"
+				== "/functions/v1/posts/\(postID)/like"
 		)
 	}
 
@@ -184,7 +184,7 @@ struct FeedClientTests {
 		#expect(request.httpMethod == "DELETE")
 		#expect(
 			request.url?.path
-				== "/functions/v1/social-feed/posts/\(postID)/like"
+				== "/functions/v1/posts/\(postID)/like"
 		)
 	}
 

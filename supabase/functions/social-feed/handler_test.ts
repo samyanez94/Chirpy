@@ -60,7 +60,9 @@ const equal = (actual: unknown, expected: unknown) =>
   );
 const body = (response: Response) => response.json();
 const request = (path: string, method = "GET") => {
-  const prefix = path.split("?")[0] === "/feed" ? "/functions/v1" : "/functions/v1/social-feed";
+  const prefix = (path.split("?")[0] === "/feed" || path.startsWith("/posts/"))
+    ? "/functions/v1"
+    : "/functions/v1/social-feed";
   return new Request(`http://localhost${prefix}${path}`, { method });
 };
 

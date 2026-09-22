@@ -82,7 +82,7 @@ nonisolated struct FeedClient: FeedServicing {
 		isLiked: Bool
 	) async throws -> PostLikeUpdate {
 		let url = baseURL.appending(
-			path: "functions/v1/social-feed/posts/\(postID)/like"
+			path: "functions/v1/posts/\(postID)/like"
 		)
 
 		var request = URLRequest(url: url)
