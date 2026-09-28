@@ -17,6 +17,20 @@ struct PreviewFeedClient: FeedServicing {
 		try result.get()
 	}
 
+	func createPost(text: String) async throws -> Post {
+		let page = try result.get()
+		guard let author = page.posts.first?.author else { throw PreviewError.requestFailed }
+		return Post(
+			id: UUID(),
+			author: author,
+			text: text,
+			imageURL: nil,
+			createdAt: .now,
+			isLiked: false,
+			likeCount: 0
+		)
+	}
+
 	func setLike(
 		postID: UUID,
 		isLiked: Bool

@@ -14,13 +14,13 @@ plain HTTP and JSON.
 
 - Shows a reverse-chronological feed
 - Loads more posts with cursor pagination
-- Creates text-only posts through the backend API
+- Creates text-only posts from the Home toolbar
 - Likes and unlikes posts
 - Refreshes with pull-to-refresh
 
 The feed loads from the backend on each launch. Posts already on screen stay visible if a refresh fails.
 
-The project intentionally skips accounts, a post composer, replies, follows, search, notifications, and realtime
+The project intentionally skips accounts, replies, follows, search, notifications, and realtime
 updates.
 
 ## Run the app

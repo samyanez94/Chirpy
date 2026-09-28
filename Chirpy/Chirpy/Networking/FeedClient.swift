@@ -10,6 +10,8 @@ import Foundation
 // MARK: - FeedServicing
 
 nonisolated protocol FeedServicing: Sendable {
+	func createPost(text: String) async throws -> Post
+
 	func fetchPage(
 		cursor: String?,
 		limit: Int
@@ -63,18 +65,17 @@ nonisolated struct FeedClient: FeedServicing {
 			throw URLError(.badURL)
 		}
 
-		let (data, response) = try await httpClient.send(request: URLRequest(url: url))
+		let page: SocialFeedPage = try await send(URLRequest(url: url))
 		try Task.checkCancellation()
+		return page
+	}
 
-		guard let response = response as? HTTPURLResponse else {
-			throw URLError(.badServerResponse)
-		}
-
-		guard 200..<300 ~= response.statusCode else {
-			throw try decoder.decode(APIErrorResponse.self, from: data).error
-		}
-
-		return try decoder.decode(SocialFeedPage.self, from: data)
+	func createPost(text: String) async throws -> Post {
+		var request = URLRequest(url: baseURL.appending(path: "functions/v1/posts"))
+		request.httpMethod = "POST"
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+		request.httpBody = try JSONEncoder().encode(["text": text])
+		return try await send(request)
 	}
 
 	func setLike(
@@ -88,17 +89,21 @@ nonisolated struct FeedClient: FeedServicing {
 		var request = URLRequest(url: url)
 		request.httpMethod = isLiked ? "POST" : "DELETE"
 
-		let (data, response) = try await httpClient.send(request: request)
+		return try await send(request)
+	}
 
+	private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
+		let (data, response) = try await httpClient.send(request: request)
 		guard let response = response as? HTTPURLResponse else {
 			throw URLError(.badServerResponse)
 		}
 
+		let decoder = decoder
 		guard 200..<300 ~= response.statusCode else {
 			throw try decoder.decode(APIErrorResponse.self, from: data).error
 		}
 
-		return try decoder.decode(PostLikeUpdate.self, from: data)
+		return try decoder.decode(Response.self, from: data)
 	}
 }
 

@@ -12,23 +12,9 @@ import Testing
 
 struct FeedClientTests {
 	@Test func testFetchPage() async throws {
-		let fixtureURL = try #require(
-			Bundle(for: NetworkingTestBundleToken.self)
-				.url(
-					forResource: "social-feed-page",
-					withExtension: "json"
-				)
-		)
-		let data = try Data(contentsOf: fixtureURL)
+		let data = try fixtureData(named: "social-feed-page")
 		let baseURL = try #require(URL(string: "https://example.com"))
-		let response = try #require(
-			HTTPURLResponse(
-				url: baseURL,
-				statusCode: 200,
-				httpVersion: nil,
-				headerFields: nil
-			)
-		)
+		let response = try httpResponse(url: baseURL, statusCode: 200)
 		let client = FeedClient(
 			baseURL: baseURL,
 			httpClient: HTTPClientStub(data: data, response: response)
@@ -78,16 +64,12 @@ struct FeedClientTests {
 			httpClient: HTTPClientStub(data: data, response: response)
 		)
 
-		do {
-			_ = try await client.fetchPage()
-			Issue.record("Expected fetchPage() to throw an APIError.")
-		} catch let error as APIError {
-			#expect(error.code == "service_unavailable")
-			#expect(error.message == "A development failure was requested.")
-			#expect(error.requestID.uuidString == "00000000-0000-4000-8000-000000000001")
-		} catch {
-			Issue.record("Expected APIError, but received \(error).")
+		let error = try await #require(throws: APIError.self) {
+			try await client.fetchPage()
 		}
+		#expect(error.code == "service_unavailable")
+		#expect(error.message == "A development failure was requested.")
+		#expect(error.requestID.uuidString == "00000000-0000-4000-8000-000000000001")
 	}
 
 	@Test func testFetchPageRejectsNonHTTPResponse() async throws {
@@ -103,14 +85,46 @@ struct FeedClientTests {
 			httpClient: HTTPClientStub(data: Data(), response: response)
 		)
 
-		do {
-			_ = try await client.fetchPage()
-			Issue.record("Expected fetchPage() to reject a non-HTTP response.")
-		} catch let error as URLError {
-			#expect(error.code == .badServerResponse)
-		} catch {
-			Issue.record("Expected URLError.badServerResponse, but received \(error).")
+		let error = try await #require(throws: URLError.self) {
+			try await client.fetchPage()
 		}
+		#expect(error.code == .badServerResponse)
+	}
+
+	@Test func testCreatePost() async throws {
+		let fixture = try #require(JSONSerialization.jsonObject(with: fixtureData(named: "social-feed-page")) as? [String: Any])
+		let posts = try #require(fixture["posts"] as? [[String: Any]])
+		let data = try JSONSerialization.data(withJSONObject: #require(posts.first))
+		let baseURL = URL(string: "https://example.com")!
+		let recorder = RequestRecorder()
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: data,
+				response: try httpResponse(url: baseURL, statusCode: 201),
+				recorder: recorder
+			)
+		)
+		let post = try await client.createPost(text: "Hello\nChirpy")
+		let request = try #require(await recorder.onlyRequest())
+		#expect(request.httpMethod == "POST")
+		#expect(request.url?.path == "/functions/v1/posts")
+		#expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
+		let payload = try JSONDecoder().decode([String: String].self, from: #require(request.httpBody))
+		#expect(payload == ["text": "Hello\nChirpy"])
+		#expect(post.id.uuidString.lowercased() == posts[0]["id"] as? String)
+	}
+
+	@Test func testCreatePostPropagatesAPIError() async throws {
+		let baseURL = URL(string: "https://example.com")!
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: try fixtureData(named: "service-unavailable-error"),
+				response: try httpResponse(url: baseURL, statusCode: 503)
+			)
+		)
+		await #expect(throws: APIError.self) { try await client.createPost(text: "Hello") }
 	}
 
 	@Test func testSetLike() async throws {
@@ -132,7 +146,8 @@ struct FeedClientTests {
 		#expect(update.likeCount == 13)
 	}
 
-	@Test func testSetLikeBuildsPostRequest() async throws {
+	@Test(arguments: [true, false])
+	func testSetLikeBuildsRequest(isLiked: Bool) async throws {
 		let data = try fixtureData(named: "post-like-update")
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let response = try httpResponse(url: baseURL, statusCode: 200)
@@ -149,39 +164,11 @@ struct FeedClientTests {
 			UUID(uuidString: "10000000-0000-4000-8000-000000000001")
 		)
 
-		_ = try await client.setLike(postID: postID, isLiked: true)
+		_ = try await client.setLike(postID: postID, isLiked: isLiked)
 
 		let recordedRequest = await recorder.onlyRequest()
 		let request = try #require(recordedRequest)
-		#expect(request.httpMethod == "POST")
-		#expect(
-			request.url?.path
-				== "/functions/v1/posts/\(postID)/like"
-		)
-	}
-
-	@Test func testSetLikeBuildsDeleteRequest() async throws {
-		let data = try fixtureData(named: "post-like-update")
-		let baseURL = try #require(URL(string: "https://example.com"))
-		let response = try httpResponse(url: baseURL, statusCode: 200)
-		let recorder = RequestRecorder()
-		let client = FeedClient(
-			baseURL: baseURL,
-			httpClient: HTTPClientStub(
-				data: data,
-				response: response,
-				recorder: recorder
-			)
-		)
-		let postID = try #require(
-			UUID(uuidString: "10000000-0000-4000-8000-000000000001")
-		)
-
-		_ = try await client.setLike(postID: postID, isLiked: false)
-
-		let recordedRequest = await recorder.onlyRequest()
-		let request = try #require(recordedRequest)
-		#expect(request.httpMethod == "DELETE")
+		#expect(request.httpMethod == (isLiked ? "POST" : "DELETE"))
 		#expect(
 			request.url?.path
 				== "/functions/v1/posts/\(postID)/like"
@@ -198,19 +185,12 @@ struct FeedClientTests {
 		)
 		let postID = UUID()
 
-		do {
-			_ = try await client.setLike(postID: postID, isLiked: true)
-			Issue.record("Expected setLike() to throw an APIError.")
-		} catch let error as APIError {
-			#expect(error.code == "service_unavailable")
-			#expect(error.message == "A development failure was requested.")
-			#expect(
-				error.requestID.uuidString
-					== "00000000-0000-4000-8000-000000000001"
-			)
-		} catch {
-			Issue.record("Expected APIError, but received \(error).")
+		let error = try await #require(throws: APIError.self) {
+			try await client.setLike(postID: postID, isLiked: true)
 		}
+		#expect(error.code == "service_unavailable")
+		#expect(error.message == "A development failure was requested.")
+		#expect(error.requestID.uuidString == "00000000-0000-4000-8000-000000000001")
 	}
 
 	@Test func testSetLikeRejectsNonHTTPResponse() async throws {
@@ -226,14 +206,10 @@ struct FeedClientTests {
 			httpClient: HTTPClientStub(data: Data(), response: response)
 		)
 
-		do {
-			_ = try await client.setLike(postID: UUID(), isLiked: true)
-			Issue.record("Expected setLike() to reject a non-HTTP response.")
-		} catch let error as URLError {
-			#expect(error.code == .badServerResponse)
-		} catch {
-			Issue.record("Expected URLError.badServerResponse, but received \(error).")
+		let error = try await #require(throws: URLError.self) {
+			try await client.setLike(postID: UUID(), isLiked: true)
 		}
+		#expect(error.code == .badServerResponse)
 	}
 
 	private func fixtureData(named name: String) throws -> Data {

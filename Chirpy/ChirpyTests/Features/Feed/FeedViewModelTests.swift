@@ -298,6 +298,8 @@ private func loadedContent(
 }
 
 private actor FeedClientSpy: FeedServicing {
+	func createPost(text: String) async throws -> Post { throw URLError(.unsupportedURL) }
+
 	private var results: [Result<SocialFeedPage, TestError>]
 	private var likeResults: [Result<PostLikeUpdate, TestError>]
 	private var requests: [FeedRequest] = []

@@ -10,10 +10,15 @@ import SwiftUI
 
 struct FeedView: View {
 
+	private let client: any FeedServicing
+
 	@State private var viewModel: FeedViewModel
 
-	init(viewModel: FeedViewModel) {
-		_viewModel = State(initialValue: viewModel)
+	@State private var isComposing = false
+
+	init(client: any FeedServicing) {
+		self.client = client
+		_viewModel = State(initialValue: FeedViewModel(client: client))
 	}
 
 	var body: some View {
@@ -52,6 +57,20 @@ struct FeedView: View {
 				}
 			}
 		}
+		.toolbar {
+			ToolbarItem(placement: .topBarTrailing) {
+				Button("New post", systemImage: "square.and.pencil") {
+					isComposing = true
+				}
+			}
+		}
+		.sheet(isPresented: $isComposing) {
+			PostComposerView { text in
+				_ = try await client.createPost(text: text)
+				// Replacing the model reloads the entire feed and discards older in-flight results.
+				viewModel = FeedViewModel(client: client)
+			}
+		}
 		.navigationTitle("Home")
 		.toolbarBackground(.visible, for: .navigationBar)
 		.navigationBarTitleDisplayMode(.inline)
@@ -74,7 +93,7 @@ struct FeedView: View {
 				.navigationBarTitleDisplayMode(.inline)
 			}
 		}
-		.task {
+		.task(id: ObjectIdentifier(viewModel)) {
 			guard case .idle = viewModel.state else {
 				return
 			}
@@ -86,9 +105,7 @@ struct FeedView: View {
 #Preview("Loaded") {
 	NavigationStack {
 		FeedView(
-			viewModel: FeedViewModel(
-				client: PreviewFeedClient(result: .success(.preview))
-			)
+			client: PreviewFeedClient(result: .success(.preview))
 		)
 	}
 }
@@ -96,9 +113,7 @@ struct FeedView: View {
 #Preview("Error") {
 	NavigationStack {
 		FeedView(
-			viewModel: FeedViewModel(
-				client: PreviewFeedClient(result: .failure(.requestFailed))
-			)
+			client: PreviewFeedClient(result: .failure(.requestFailed))
 		)
 	}
 }
