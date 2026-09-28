@@ -28,6 +28,7 @@ export interface FeedPost {
 }
 
 export interface Repository {
+  createPost(text: string): Promise<DatabasePost>;
   feed(limitPlusOne: number, cursor: CursorPayload | null): Promise<DatabasePost[]>;
   setLike(postID: string, liked: boolean): Promise<{ postExists: boolean; isLiked: boolean; likeCount: number }>;
 }

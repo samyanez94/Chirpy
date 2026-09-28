@@ -10,6 +10,16 @@ if (!url || !key || !demoUserID) throw new Error("Required server environment is
 const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
 const repository: Repository = {
+  async createPost(text: string): Promise<DatabasePost> {
+    const { data, error } = await client.rpc("create_post", {
+      p_demo_user_id: demoUserID,
+      p_text: text,
+    });
+    if (error) throw new Error(`create_post failed: ${error.code}`);
+    const row = data?.[0];
+    if (!row) throw new Error("create_post returned no result");
+    return row as DatabasePost;
+  },
   async feed(limitPlusOne: number, cursor: CursorPayload | null): Promise<DatabasePost[]> {
     const { data, error } = await client.rpc("feed_page", {
       p_demo_user_id: demoUserID,

@@ -64,6 +64,30 @@ export function createHandler(repository: Repository, environment: Environment) 
         );
       }
 
+      if (path === "/posts") {
+        if (request.method !== "POST") {
+          return error(405, "method_not_allowed", "This method is not allowed for the requested route.");
+        }
+        let payload: unknown;
+        try {
+          payload = await request.json();
+        } catch {
+          return error(400, "invalid_request", "The request body must be valid JSON.");
+        }
+        if (
+          typeof payload !== "object" || payload === null || Array.isArray(payload) ||
+          !("text" in payload) || typeof payload.text !== "string" ||
+          Object.keys(payload).some((key) => key !== "text")
+        ) {
+          return error(400, "invalid_request", "The request body must contain only a text string.");
+        }
+        const text = payload.text.trim();
+        if (Array.from(text).length < 1 || Array.from(text).length > 300) {
+          return error(400, "invalid_request", "Text must contain 1 through 300 characters after trimming.");
+        }
+        return response(mapPost(await repository.createPost(text)), 201, headers);
+      }
+
       const match = path.match(/^\/posts\/([^/]+)\/like$/);
       if (match) {
         if (request.method !== "POST" && request.method !== "DELETE") {

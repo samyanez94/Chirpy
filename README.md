@@ -14,12 +14,14 @@ plain HTTP and JSON.
 
 - Shows a reverse-chronological feed
 - Loads more posts with cursor pagination
+- Creates text-only posts through the backend API
 - Likes and unlikes posts
 - Refreshes with pull-to-refresh
 
 The feed loads from the backend on each launch. Posts already on screen stay visible if a refresh fails.
 
-The project intentionally skips accounts, post creation, replies, follows, search, notifications, and realtime updates.
+The project intentionally skips accounts, a post composer, replies, follows, search, notifications, and realtime
+updates.
 
 ## Run the app
 
@@ -102,12 +104,13 @@ deno lint
 
 ## Run the iOS tests
 
-Open the project in Xcode, pick an iPhone Simulator, and use **Product › Test** (`⌘U`). The test suite covers feed state,
-pagination, networking, and likes.
+Open the project in Xcode, pick an iPhone Simulator, and use **Product › Test** (`⌘U`). The test suite covers feed
+state, pagination, networking, and likes.
 
 ## A quick note on pagination
 
-Posts are ordered by `created_at DESC, id DESC`. Each response includes an opaque `nextCursor`; pass it back unchanged to load the next page. The API uses keyset pagination, including UUID tie-breaking for posts with identical timestamps.
+Posts are ordered by `created_at DESC, id DESC`. Each response includes an opaque `nextCursor`; pass it back unchanged
+to load the next page. The API uses keyset pagination, including UUID tie-breaking for posts with identical timestamps.
 
 ## Deploy the backend
 
@@ -123,3 +126,38 @@ supabase secrets set --env-file path/to/production.env
 
 Keep development scenarios disabled in production. `supabase db push` does not run `seed.sql`, so seed a hosted demo
 project separately only if you want the fictional content there.
+
+## Create a post
+
+`POST /functions/v1/posts` accepts only a `text` string. The same endpoint is available at
+`/functions/v1/social-feed/posts`.
+
+```sh
+curl -X POST http://127.0.0.1:54321/functions/v1/posts \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"Hello from Chirpy!"}'
+```
+
+Text is trimmed at both ends and must contain 1–300 Unicode code points after trimming. Internal whitespace and line
+breaks are preserved. Attachments, author IDs, and other extra fields are rejected.
+
+A successful request returns **201 Created** with a complete post directly, using the same shape as a feed item: `id`,
+`author`, `text`, `imageURL`, `createdAt`, `isLiked`, and `likeCount`. The database generates the ID and timestamp; new
+posts have `imageURL: null`, `isLiked: false`, and `likeCount: 0`.
+
+All posts are authored by the server's `DEMO_USER_ID`, currently the seeded Sam Rivera (`@sampler`) profile. All clients
+share that identity for both posting and liking. The profile must already exist. This is intended for local/private
+demos; there is no authentication or per-user identity. Each successful POST creates a new post, including repeated
+requests.
+
+Errors retain the existing `{ "error": { "code", "message", "requestID" } }` envelope:
+
+- **400 `invalid_request`**: malformed JSON, invalid text, or unsupported fields.
+- **405 `method_not_allowed`**: unsupported HTTP method.
+- **500 `internal_error`**: database or configuration failure, including a missing demo profile.
+
+For an existing local database, apply pending migrations without resetting its data:
+
+```sh
+supabase migration up --local
+```

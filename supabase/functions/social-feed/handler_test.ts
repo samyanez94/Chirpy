@@ -18,7 +18,26 @@ const rows: DatabasePost[] = ids.map((id, index) => ({
 
 class MemoryRepository implements Repository {
   likes = new Set<string>();
-  constructor(readonly posts = rows) {}
+  readonly posts: DatabasePost[];
+  createdTexts: string[] = [];
+  constructor(posts = rows) {
+    this.posts = posts.map((post) => ({ ...post }));
+  }
+  createPost(text: string): Promise<DatabasePost> {
+    this.createdTexts.push(text);
+    const post: DatabasePost = {
+      ...rows[0],
+      id: crypto.randomUUID(),
+      body: text,
+      created_at: new Date().toISOString(),
+      image_url: null,
+      is_liked: false,
+      like_count: 0,
+    };
+    this.posts.push(post);
+    this.posts.sort(compareRows);
+    return Promise.resolve(post);
+  }
   feed(limit: number, cursor: CursorPayload | null): Promise<DatabasePost[]> {
     const eligible = cursor
       ? this.posts.filter((post) =>
@@ -60,7 +79,7 @@ const equal = (actual: unknown, expected: unknown) =>
   );
 const body = (response: Response) => response.json();
 const request = (path: string, method = "GET") => {
-  const prefix = (path.split("?")[0] === "/feed" || path.startsWith("/posts/"))
+  const prefix = (path.split("?")[0] === "/feed" || path.split("?")[0] === "/posts" || path.startsWith("/posts/"))
     ? "/functions/v1"
     : "/functions/v1/social-feed";
   return new Request(`http://localhost${prefix}${path}`, { method });
@@ -160,3 +179,99 @@ function compareRows(a: DatabasePost, b: DatabasePost): number {
 function compareAPI(a: { createdAt: string; id: string }, b: { createdAt: string; id: string }): number {
   return b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id);
 }
+
+const createRequest = (payload: unknown, path = "/functions/v1/posts") =>
+  new Request(`http://localhost${path}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+Deno.test("creation returns a complete post through both route prefixes", async () => {
+  for (const path of ["/functions/v1/posts", "/functions/v1/social-feed/posts"]) {
+    const repository = new MemoryRepository();
+    const handler = createHandler(repository, { enableDevScenarios: false });
+    const result = await handler(createRequest({ text: "  Hello\n\nworld!  " }, path));
+    equal(result.status, 201);
+    const post = await body(result);
+    assert(typeof post.id === "string" && post.id.length === 36);
+    equal(post, {
+      id: post.id,
+      author: { id: rows[0].author_id, username: "sampler", displayName: "Sam Rivera", avatarURL: null },
+      text: "Hello\n\nworld!",
+      imageURL: null,
+      createdAt: post.createdAt,
+      isLiked: false,
+      likeCount: 0,
+    });
+    equal(new Date(post.createdAt).toISOString(), post.createdAt);
+    equal(repository.createdTexts, ["Hello\n\nworld!"]);
+    equal((await body(await handler(request("/feed")))).posts[0], post);
+    const like = await body(await handler(request(`/posts/${post.id}/like`, "POST")));
+    equal(like, { postID: post.id, isLiked: true, likeCount: 1 });
+    equal(new MemoryRepository().posts.length, rows.length);
+  }
+});
+
+Deno.test("creation counts Unicode code points and accepts the text boundaries", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { enableDevScenarios: false });
+  for (const text of ["a", "a".repeat(300), "😀".repeat(300), "e\u0301".repeat(150)]) {
+    const result = await handler(createRequest({ text: ` \t${text}\n ` }));
+    equal(result.status, 201);
+    equal((await body(result)).text, text);
+  }
+});
+
+Deno.test("invalid creation payloads never reach the repository", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { enableDevScenarios: false });
+  for (
+    const payload of [
+      null,
+      [],
+      "text",
+      1,
+      true,
+      {},
+      { text: null },
+      { text: 1 },
+      { text: [] },
+      { text: "" },
+      { text: " \t\n\u00a0 " },
+      { text: "a".repeat(301) },
+      { text: "😀".repeat(301) },
+      { text: "hello", authorID: rows[0].author_id },
+      { text: "hello", imageURL: null },
+      { text: "hello", attachments: [] },
+      { text: "hello", unknown: true },
+    ]
+  ) {
+    const result = await handler(createRequest(payload));
+    equal(result.status, 400);
+    const payloadError = (await body(result)).error;
+    equal(payloadError.code, "invalid_request");
+    equal(payloadError.requestID, result.headers.get("x-request-id"));
+  }
+  for (const raw of ["", "{", '{"text":']) {
+    const result = await handler(new Request("http://localhost/functions/v1/posts", { method: "POST", body: raw }));
+    equal(result.status, 400);
+    equal((await body(result)).error.code, "invalid_request");
+  }
+  equal(repository.createdTexts, []);
+});
+
+Deno.test("creation rejects unsupported methods and reports repository failures", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { enableDevScenarios: false });
+  for (const method of ["GET", "PUT", "PATCH", "DELETE"]) {
+    const result = await handler(request("/posts", method));
+    equal(result.status, 405);
+    equal((await body(result)).error.code, "method_not_allowed");
+  }
+  equal(repository.createdTexts, []);
+  repository.createPost = () => Promise.reject(new Error("Database unavailable"));
+  const result = await handler(createRequest({ text: "Hello" }));
+  equal(result.status, 500);
+  equal((await body(result)).error.code, "internal_error");
+});
