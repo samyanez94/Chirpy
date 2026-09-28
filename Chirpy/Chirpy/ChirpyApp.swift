@@ -14,7 +14,10 @@ struct ChirpyApp: App {
 			NavigationStack {
 				FeedView(
 					viewModel: FeedViewModel(
-						client: FeedClient(baseURL: AppConfiguration.baseURL)
+						client: FeedClient(
+							baseURL: AppConfiguration.baseURL,
+							httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
+						)
 					)
 				)
 			}

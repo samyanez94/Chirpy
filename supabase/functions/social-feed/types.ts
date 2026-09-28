@@ -33,7 +33,10 @@ export interface Repository {
   setLike(postID: string, liked: boolean): Promise<{ postExists: boolean; isLiked: boolean; likeCount: number }>;
 }
 
+export class PostingLimitError extends Error {}
+
 export interface Environment {
+  apiKey: string;
   enableDevScenarios: boolean;
   allowedOrigin?: string;
 }

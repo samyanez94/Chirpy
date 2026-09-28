@@ -28,10 +28,28 @@ updates.
 You will need a recent Xcode version that supports the project's iOS 26.5 deployment target.
 
 First, get the local backend running using the steps below. Then open `Chirpy/Chirpy.xcodeproj`, choose an iPhone
-Simulator, and hit Run. The app is already set up to talk to Supabase at `http://127.0.0.1:54321`.
+Simulator, and hit Run. The app currently points to the hosted Supabase project. For local development, set
+`AppConfiguration.baseURL` to `http://127.0.0.1:54321`.
 
 That address works from the Simulator. If you want to run Chirpy on a physical device, update the URL in
 `Chirpy/Chirpy/AppConfiguration.swift` to your Mac's local network address and make sure the phone can reach it.
+
+## Personal API key
+
+Data endpoints require a dedicated random key in `X-Chirpy-API-Key`; `/health` remains public. The key gates personal
+access and does not identify individual users. Posts and likes still use `DEMO_USER_ID`. No anonymous signup is
+required.
+
+Copy `Chirpy/Configuration/LocalConfiguration.example.plist` to `Chirpy/Chirpy/LocalConfiguration.plist`, then replace
+`ChirpyAPIKey` with a random key generated using `openssl rand -hex 32`. The destination is Git-ignored and included in
+local app builds. Set the same value as `CHIRPY_API_KEY` in the ignored `supabase/functions/.env` file. Never use the
+Supabase service-role key as the client key. Missing client configuration fails before sending a request; missing server
+configuration prevents function startup.
+
+For hosted deployment, create a temporary ignored env file containing only `CHIRPY_API_KEY=...` and run
+`supabase secrets set --env-file <path> --project-ref <project-ref>`. Do not upload local Supabase URLs or service keys.
+Rotate the key by changing the hosted secret, local env file, and local app plist, then rebuilding the app. The key is
+embedded in your personal app build; do not distribute that build or commit the plist.
 
 ## Run the backend locally
 
@@ -57,6 +75,7 @@ Fill in these values in `supabase/functions/.env`:
 | --------------------------- | ------------------------------------------------- |
 | `SUPABASE_URL`              | `http://127.0.0.1:54321`                          |
 | `SUPABASE_SERVICE_ROLE_KEY` | The local service-role key from `supabase status` |
+| `CHIRPY_API_KEY`            | Your dedicated random personal API key            |
 | `DEMO_USER_ID`              | `00000000-0000-4000-8000-000000000001`            |
 | `ENABLE_DEV_SCENARIOS`      | `true`                                            |
 | `ALLOWED_ORIGIN`            | Optional; usually blank for the iOS app           |
@@ -71,14 +90,16 @@ supabase functions serve --env-file supabase/functions/.env --no-verify-jwt
 
 ## Try the API
 
+Set `CHIRPY_API_KEY` in your shell to the configured key before making data requests.
+
 ```sh
 curl http://127.0.0.1:54321/functions/v1/social-feed/health
-curl 'http://127.0.0.1:54321/functions/v1/feed?limit=20'
+curl -H "X-Chirpy-API-Key: $CHIRPY_API_KEY" 'http://127.0.0.1:54321/functions/v1/feed?limit=20'
 
-curl -X POST \
+curl -X POST -H "X-Chirpy-API-Key: $CHIRPY_API_KEY" \
   http://127.0.0.1:54321/functions/v1/posts/10000000-0000-4000-8000-000000000001/like
 
-curl -X DELETE \
+curl -X DELETE -H "X-Chirpy-API-Key: $CHIRPY_API_KEY" \
   http://127.0.0.1:54321/functions/v1/posts/10000000-0000-4000-8000-000000000001/like
 ```
 
@@ -122,6 +143,7 @@ supabase functions deploy social-feed --no-verify-jwt
 supabase functions deploy feed --no-verify-jwt
 supabase functions deploy posts --no-verify-jwt
 supabase secrets set --env-file path/to/production.env
+# Include CHIRPY_API_KEY and DEMO_USER_ID; never upload your local service-role key.
 ```
 
 Keep development scenarios disabled in production. `supabase db push` does not run `seed.sql`, so seed a hosted demo
@@ -135,6 +157,7 @@ project separately only if you want the fictional content there.
 ```sh
 curl -X POST http://127.0.0.1:54321/functions/v1/posts \
   -H 'Content-Type: application/json' \
+  -H "X-Chirpy-API-Key: $CHIRPY_API_KEY" \
   -d '{"text":"Hello from Chirpy!"}'
 ```
 
@@ -148,11 +171,14 @@ posts have `imageURL: null`, `isLiked: false`, and `likeCount: 0`.
 All posts are authored by the server's `DEMO_USER_ID`, currently the seeded Sam Rivera (`@sampler`) profile. All clients
 share that identity for both posting and liking. The profile must already exist. This is intended for local/private
 demos; there is no authentication or per-user identity. Each successful POST creates a new post, including repeated
-requests.
+requests. Creation is limited to five posts per rolling minute and 50 per rolling day for the shared demo profile,
+including concurrent requests. These limits are shared by all app installations.
 
 Errors retain the existing `{ "error": { "code", "message", "requestID" } }` envelope:
 
 - **400 `invalid_request`**: malformed JSON, invalid text, or unsupported fields.
+- **401 `unauthorized`**: missing or incorrect personal API key.
+- **429 `rate_limit_exceeded`**: the shared posting limit was reached.
 - **405 `method_not_allowed`**: unsupported HTTP method.
 - **500 `internal_error`**: database or configuration failure, including a missing demo profile.
 

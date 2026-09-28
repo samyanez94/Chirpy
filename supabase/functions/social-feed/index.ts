@@ -1,11 +1,13 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { PostingLimitError } from "./types.ts";
 import { createHandler } from "./handler.ts";
 import type { CursorPayload, DatabasePost, Repository } from "./types.ts";
 
 const url = Deno.env.get("SUPABASE_URL");
 const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const demoUserID = Deno.env.get("DEMO_USER_ID");
-if (!url || !key || !demoUserID) throw new Error("Required server environment is missing");
+const apiKey = Deno.env.get("CHIRPY_API_KEY");
+if (!url || !key || !demoUserID || !apiKey) throw new Error("Required server environment is missing");
 
 const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
@@ -15,6 +17,7 @@ const repository: Repository = {
       p_demo_user_id: demoUserID,
       p_text: text,
     });
+    if (error?.code === "P0429") throw new PostingLimitError();
     if (error) throw new Error(`create_post failed: ${error.code}`);
     const row = data?.[0];
     if (!row) throw new Error("create_post returned no result");
@@ -44,6 +47,7 @@ const repository: Repository = {
 };
 
 Deno.serve(createHandler(repository, {
+  apiKey,
   enableDevScenarios: Deno.env.get("ENABLE_DEV_SCENARIOS") === "true",
   allowedOrigin: Deno.env.get("ALLOWED_ORIGIN") || undefined,
 }));

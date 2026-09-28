@@ -1,4 +1,5 @@
 import { decodeCursor, encodeCursor } from "./cursor.ts";
+import { PostingLimitError } from "./types.ts";
 import { createHandler } from "./handler.ts";
 import type { CursorPayload, DatabasePost, Repository } from "./types.ts";
 
@@ -82,7 +83,7 @@ const request = (path: string, method = "GET") => {
   const prefix = (path.split("?")[0] === "/feed" || path.split("?")[0] === "/posts" || path.startsWith("/posts/"))
     ? "/functions/v1"
     : "/functions/v1/social-feed";
-  return new Request(`http://localhost${prefix}${path}`, { method });
+  return new Request(`http://localhost${prefix}${path}`, { method, headers: { "x-chirpy-api-key": "test-key" } });
 };
 
 Deno.test("cursor round trips and rejects malformed or unsupported values", () => {
@@ -101,7 +102,7 @@ Deno.test("cursor round trips and rejects malformed or unsupported values", () =
 
 Deno.test("first page defaults to 20 and uses descending timestamp then id", async () => {
   const payload = await body(
-    await createHandler(new MemoryRepository(), { enableDevScenarios: false })(request("/feed")),
+    await createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: false })(request("/feed")),
   );
   equal(payload.posts.length, 20);
   for (let i = 1; i < payload.posts.length; i++) assert(compareAPI(payload.posts[i - 1], payload.posts[i]) <= 0);
@@ -109,7 +110,7 @@ Deno.test("first page defaults to 20 and uses descending timestamp then id", asy
 });
 
 Deno.test("cursor traversal returns every post once including tied timestamps", async () => {
-  const handler = createHandler(new MemoryRepository(), { enableDevScenarios: false });
+  const handler = createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: false });
   const received: string[] = [];
   let cursor: string | null = null;
   let final;
@@ -124,7 +125,7 @@ Deno.test("cursor traversal returns every post once including tied timestamps", 
 });
 
 Deno.test("invalid limits and cursors use the error contract", async () => {
-  const handler = createHandler(new MemoryRepository(), { enableDevScenarios: false });
+  const handler = createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: false });
   for (const path of ["/feed?limit=0", "/feed?limit=51", "/feed?limit=2.5"]) {
     const response = await handler(request(path));
     equal(response.status, 400);
@@ -138,7 +139,7 @@ Deno.test("invalid limits and cursors use the error contract", async () => {
 });
 
 Deno.test("like and unlike are idempotent and unknown posts return 404", async () => {
-  const handler = createHandler(new MemoryRepository(), { enableDevScenarios: false });
+  const handler = createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: false });
   const path = `/posts/${rows[0].id}/like`;
   for (const method of ["POST", "POST"]) {
     equal(await body(await handler(request(path, method))), { postID: rows[0].id, isLiked: true, likeCount: 1 });
@@ -152,9 +153,9 @@ Deno.test("like and unlike are idempotent and unknown posts return 404", async (
 });
 
 Deno.test("development scenarios are deterministic and gated", async () => {
-  const disabled = createHandler(new MemoryRepository(), { enableDevScenarios: false });
+  const disabled = createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: false });
   equal((await body(await disabled(request("/feed?scenario=empty")))).error.code, "invalid_request");
-  const enabled = createHandler(new MemoryRepository(), { enableDevScenarios: true });
+  const enabled = createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: true });
   equal(await body(await enabled(request("/feed?scenario=empty"))), { posts: [], nextCursor: null, hasMore: false });
   const unavailable = await enabled(request("/feed?scenario=error"));
   equal(unavailable.status, 503);
@@ -164,7 +165,7 @@ Deno.test("development scenarios are deterministic and gated", async () => {
 });
 
 Deno.test("health, routing, and methods return documented responses", async () => {
-  const handler = createHandler(new MemoryRepository(), { enableDevScenarios: false });
+  const handler = createHandler(new MemoryRepository(), { apiKey: "test-key", enableDevScenarios: false });
   equal(await body(await handler(request("/health"))), { status: "ok" });
   equal((await body(await handler(request("/missing")))).error.code, "not_found");
   const method = await handler(request("/feed", "POST"));
@@ -183,14 +184,14 @@ function compareAPI(a: { createdAt: string; id: string }, b: { createdAt: string
 const createRequest = (payload: unknown, path = "/functions/v1/posts") =>
   new Request(`http://localhost${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-chirpy-api-key": "test-key" },
     body: JSON.stringify(payload),
   });
 
 Deno.test("creation returns a complete post through both route prefixes", async () => {
   for (const path of ["/functions/v1/posts", "/functions/v1/social-feed/posts"]) {
     const repository = new MemoryRepository();
-    const handler = createHandler(repository, { enableDevScenarios: false });
+    const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
     const result = await handler(createRequest({ text: "  Hello\n\nworld!  " }, path));
     equal(result.status, 201);
     const post = await body(result);
@@ -215,7 +216,7 @@ Deno.test("creation returns a complete post through both route prefixes", async 
 
 Deno.test("creation counts Unicode code points and accepts the text boundaries", async () => {
   const repository = new MemoryRepository();
-  const handler = createHandler(repository, { enableDevScenarios: false });
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
   for (const text of ["a", "a".repeat(300), "😀".repeat(300), "e\u0301".repeat(150)]) {
     const result = await handler(createRequest({ text: ` \t${text}\n ` }));
     equal(result.status, 201);
@@ -225,7 +226,7 @@ Deno.test("creation counts Unicode code points and accepts the text boundaries",
 
 Deno.test("invalid creation payloads never reach the repository", async () => {
   const repository = new MemoryRepository();
-  const handler = createHandler(repository, { enableDevScenarios: false });
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
   for (
     const payload of [
       null,
@@ -254,7 +255,13 @@ Deno.test("invalid creation payloads never reach the repository", async () => {
     equal(payloadError.requestID, result.headers.get("x-request-id"));
   }
   for (const raw of ["", "{", '{"text":']) {
-    const result = await handler(new Request("http://localhost/functions/v1/posts", { method: "POST", body: raw }));
+    const result = await handler(
+      new Request("http://localhost/functions/v1/posts", {
+        method: "POST",
+        body: raw,
+        headers: { "x-chirpy-api-key": "test-key" },
+      }),
+    );
     equal(result.status, 400);
     equal((await body(result)).error.code, "invalid_request");
   }
@@ -263,7 +270,7 @@ Deno.test("invalid creation payloads never reach the repository", async () => {
 
 Deno.test("creation rejects unsupported methods and reports repository failures", async () => {
   const repository = new MemoryRepository();
-  const handler = createHandler(repository, { enableDevScenarios: false });
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
   for (const method of ["GET", "PUT", "PATCH", "DELETE"]) {
     const result = await handler(request("/posts", method));
     equal(result.status, 405);
@@ -274,4 +281,36 @@ Deno.test("creation rejects unsupported methods and reports repository failures"
   const result = await handler(createRequest({ text: "Hello" }));
   equal(result.status, 500);
   equal((await body(result)).error.code, "internal_error");
+});
+
+Deno.test("all data routes reject missing and incorrect API keys", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  for (const path of ["/feed", "/posts", `/posts/${rows[0].id}/like`]) {
+    for (const key of ["", "wrong", "bad-key!"]) {
+      const result = await handler(
+        new Request(`http://localhost/functions/v1${path}`, {
+          method: path === "/feed" ? "GET" : "POST",
+          headers: { "x-chirpy-api-key": key },
+        }),
+      );
+      equal(result.status, 401);
+      equal((await body(result)).error.code, "unauthorized");
+    }
+  }
+  equal(repository.createdTexts, []);
+  equal((await handler(new Request("http://localhost/functions/v1/social-feed/health"))).status, 200);
+  const unconfigured = createHandler(repository, { apiKey: "", enableDevScenarios: false });
+  equal((await unconfigured(request("/feed"))).status, 401);
+});
+
+Deno.test("posting limits use the existing error envelope", async () => {
+  const repository = new MemoryRepository();
+  repository.createPost = () => {
+    throw new PostingLimitError();
+  };
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const result = await handler(createRequest({ text: "Hello" }));
+  equal(result.status, 429);
+  equal((await body(result)).error.code, "rate_limit_exceeded");
 });

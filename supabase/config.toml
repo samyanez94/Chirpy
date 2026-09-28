@@ -38,6 +38,7 @@ enable_signup = false
 enabled = true
 policy = "per_worker"
 
+# Each data route checks X-Chirpy-API-Key in the handler. Health remains public.
 [functions.social-feed]
 verify_jwt = false
 

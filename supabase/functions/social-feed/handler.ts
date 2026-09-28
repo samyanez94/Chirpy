@@ -1,6 +1,9 @@
 import { decodeCursor, encodeCursor, InvalidCursorError, isUUID } from "./cursor.ts";
 import type { DatabasePost, Environment, FeedPost, Repository } from "./types.ts";
 
+import { timingSafeEqual } from "node:crypto";
+import { PostingLimitError } from "./types.ts";
+
 const jsonHeaders = { "content-type": "application/json; charset=utf-8" };
 
 export function createHandler(repository: Repository, environment: Environment) {
@@ -23,6 +26,13 @@ export function createHandler(repository: Repository, environment: Environment) 
           return error(405, "method_not_allowed", "This method is not allowed for the requested route.");
         }
         return response({ status: "ok" }, 200, headers);
+      }
+
+      const suppliedKey = request.headers.get("x-chirpy-api-key") ?? "";
+      const expected = new TextEncoder().encode(environment.apiKey);
+      const supplied = new TextEncoder().encode(suppliedKey);
+      if (!expected.length || expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+        return error(401, "unauthorized", "A valid Chirpy API key is required.");
       }
 
       if (path === "/feed") {
@@ -102,6 +112,9 @@ export function createHandler(repository: Repository, environment: Environment) 
 
       return error(404, "not_found", "The requested route does not exist.");
     } catch (cause) {
+      if (cause instanceof PostingLimitError) {
+        return error(429, "rate_limit_exceeded", "Posting limit reached. Please try again later.");
+      }
       if (cause instanceof InvalidCursorError) return error(400, "invalid_cursor", "The supplied cursor is invalid.");
       console.error(
         JSON.stringify({
