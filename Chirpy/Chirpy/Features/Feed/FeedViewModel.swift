@@ -126,11 +126,11 @@ final class FeedViewModel {
 			let page = try await client.fetchPage(cursor: cursor, limit: Self.pageSize)
 
 			updateContent(expectedCursor: cursor) { content in
-				let existingIDs = Set(content.posts.map(\.id))
+				var existingIDs = Set(content.posts.map(\.id))
 
 				content.posts.append(
 					contentsOf: page.posts.filter {
-						!existingIDs.contains($0.id)
+						existingIDs.insert($0.id).inserted
 					}
 				)
 
@@ -242,8 +242,9 @@ final class FeedViewModel {
 
 extension SocialFeedPage {
 	fileprivate var feedContent: FeedViewModel.FeedContent {
-		.init(
-			posts: posts,
+		var seenIDs = Set<UUID>()
+		return .init(
+			posts: posts.filter { seenIDs.insert($0.id).inserted },
 			nextCursor: nextCursor
 		)
 	}
