@@ -55,6 +55,25 @@ struct FeedView: View {
 		.navigationTitle("Home")
 		.toolbarBackground(.visible, for: .navigationBar)
 		.navigationBarTitleDisplayMode(.inline)
+		.navigationDestination(for: UUID.self) { postID in
+			if case .loaded(let content) = viewModel.state,
+				let post = content.posts.first(where: { $0.id == postID })
+			{
+				PostDetailView(post: post) {
+					Task {
+						await viewModel.toggleLike(postID: postID)
+					}
+				}
+			} else {
+				ContentUnavailableView(
+					"Post unavailable",
+					systemImage: "text.bubble",
+					description: Text("This post is no longer in your feed.")
+				)
+				.navigationTitle("Post")
+				.navigationBarTitleDisplayMode(.inline)
+			}
+		}
 		.task {
 			guard case .idle = viewModel.state else {
 				return

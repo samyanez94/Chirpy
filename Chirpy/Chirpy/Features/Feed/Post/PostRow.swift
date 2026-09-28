@@ -12,47 +12,58 @@ struct PostRow: View {
 	let onLike: () -> Void
 
 	var body: some View {
-		HStack(alignment: .top, spacing: 12) {
-			PostAvatarView(url: post.author.avatarURL)
+		VStack(alignment: .leading, spacing: 8) {
+			NavigationLink(value: post.id) {
+				HStack(alignment: .top, spacing: 12) {
+					PostAvatarView(url: post.author.avatarURL)
 
-			VStack(alignment: .leading, spacing: 8) {
-				AuthorHeaderView(
-					author: post.author,
-					createdAt: post.createdAt
-				)
+					VStack(alignment: .leading, spacing: 8) {
+						AuthorHeaderView(
+							author: post.author,
+							createdAt: post.createdAt
+						)
 
-				Text(post.text)
-					.font(.body)
+						Text(post.text)
+							.font(.body)
 
-				if let imageURL = post.imageURL {
-					PostImageView(
-						url: imageURL,
-						authorDisplayName: post.author.displayName
-					)
+						if let imageURL = post.imageURL {
+							PostImageView(
+								url: imageURL,
+								authorDisplayName: post.author.displayName
+							)
+						}
+					}
 				}
-
-				PostToolbarView(
-					isLiked: post.isLiked,
-					likeCount: post.likeCount,
-					onLike: onLike
-				)
+				.contentShape(.rect)
 			}
+			.buttonStyle(.plain)
+
+			PostToolbarView(
+				isLiked: post.isLiked,
+				likeCount: post.likeCount,
+				onLike: onLike
+			)
+			.padding(.leading, 56)
 		}
 		.padding(.vertical, 8)
 	}
 }
 
 #Preview("Regular Post") {
-	List {
-		PostRow(post: .preview, onLike: {})
+	NavigationStack {
+		List {
+			PostRow(post: .preview, onLike: {})
+		}
+		.listStyle(.plain)
 	}
-	.listStyle(.plain)
 }
 
 #Preview("Large Text") {
-	List {
-		PostRow(post: .preview, onLike: {})
+	NavigationStack {
+		List {
+			PostRow(post: .preview, onLike: {})
+		}
+		.listStyle(.plain)
+		.environment(\.dynamicTypeSize, .accessibility3)
 	}
-	.listStyle(.plain)
-	.environment(\.dynamicTypeSize, .accessibility3)
 }
