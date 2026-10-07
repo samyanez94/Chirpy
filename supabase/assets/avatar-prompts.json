@@ -1,0 +1,82 @@
+{
+  "tool": "built-in image_gen",
+  "styleReference": "crow-v1.jpg",
+  "portraits": [
+    {
+      "species": "crow",
+      "prompt": "Approved sample: square illustrated mischievous black crow portrait, painterly feather detail, solid apricot background, no props or text.",
+      "file": "crow-v1.jpg",
+      "reference": true
+    },
+    {
+      "species": "sparrow",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: style reference ONLY, the approved crow portrait. Create a new portrait of a different species, matching the reference's illustrated rendering exactly: painterly feather brushwork, bold clean silhouette, expressive slightly mischievous natural bird face, same level of detail and polish, same close head-and-upper-chest framing and three-quarter pose facing right. Not photorealistic, not 3D, no clothes or props.\nSubject: a cheerful house sparrow named Pip; warm brown crown and patterned brown wings, soft gray cheek, little black bib, short seed-eating beak, alert friendly expression.\nBackdrop: one uniform solid pale sky blue, no gradient or texture.\nComposition: centered single bird, square, entire head and beak inside circular crop safe area, chest reaches bottom edge. Clear at 44px.\nNo text, watermark, borders, scenery, objects, extra birds.",
+      "file": "sparrow-v1.jpg"
+    },
+    {
+      "species": "pigeon",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a city pigeon with slate gray head, iridescent green and violet neck feathers, small narrow beak with pale cere; pleasantly unbothered expression.\nBackdrop: completely solid soft dusty rose, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "pigeon-v1.jpg"
+    },
+    {
+      "species": "owl",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a great horned owl with warm brown mottled feathers, prominent ear tufts, broad facial discs, round amber eyes, small hooked beak partly hidden by feathers; sleepy unimpressed expression.\nBackdrop: completely solid muted lavender, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "owl-v1.jpg"
+    },
+    {
+      "species": "goose",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a Canada goose with black head and long black neck, distinct white cheek patch, slim dark bill; stern territorial expression.\nBackdrop: completely solid warm butter yellow, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "goose-v1.jpg"
+    },
+    {
+      "species": "parrot",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: an African grey parrot with scalloped silver-gray feathers, pale facial skin around warm yellow eye, short powerful hooked black bill; knowing conversational expression.\nBackdrop: completely solid soft mint green, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "parrot-v1.jpg"
+    },
+    {
+      "species": "duck",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a male mallard duck with glossy emerald green head, narrow white neck ring, chestnut chest and unmistakable broad flat yellow bill; relaxed friendly expression.\nBackdrop: completely solid soft peach, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "duck-v1.jpg"
+    },
+    {
+      "species": "robin",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: an American robin with charcoal-gray head, white eye markings, slim yellow beak and warm orange-red breast; eager bright-eyed expression.\nBackdrop: completely solid pale sage green, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "robin-v1.jpg"
+    },
+    {
+      "species": "woodpecker",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a red-bellied woodpecker with red crown, cream face, black-and-white barred wings and long straight pointed chisel bill; focused energetic expression.\nBackdrop: completely solid pale powder blue, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area, chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "woodpecker-v1.jpg"
+    },
+    {
+      "species": "hummingbird",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a male ruby-throated hummingbird with emerald feathers, ruby-red throat patch, tiny body and very long slender straight needle bill; intensely alert expression.\nBackdrop: completely solid pale lilac, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area; for long-billed hummingbird slightly zoom out so full bill is visible inside safe circle. Chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "hummingbird-v1.jpg"
+    },
+    {
+      "species": "seagull",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a herring gull with white head, light gray wings, yellow eye and yellow bill with red spot near tip; opportunistic confident expression.\nBackdrop: completely solid muted turquoise, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area; for long-billed hummingbird slightly zoom out so full bill is visible inside safe circle. Chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "seagull-v1.jpg"
+    },
+    {
+      "species": "flamingo",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a flamingo with soft coral-pink feathers, long gracefully curved neck and distinctive thick downturned pale pink bill with black tip; poised slightly haughty expression.\nBackdrop: completely solid pale seafoam, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area. Chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "flamingo-v1.jpg"
+    },
+    {
+      "species": "penguin",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: an Adélie penguin with black head, sharp white eye ring, short dark beak, white breast; earnest determined expression.\nBackdrop: completely solid soft coral pink, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head and beak comfortably inside central circular safe area. Chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "penguin-v1.jpg"
+    },
+    {
+      "species": "peacock",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a male peacock with brilliant cobalt-blue head and neck, small upright fan crest and white facial markings; proudly composed expression. Head-and-chest only, no tail display.\nBackdrop: completely solid pale golden yellow, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head, crest and beak comfortably inside central circular safe area. Chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "peacock-v1.jpg"
+    },
+    {
+      "species": "swallow",
+      "prompt": "Use case: stylized-concept\nAsset type: square bird profile avatar for Chirpy.\nInput image: approved crow, STYLE REFERENCE ONLY. Create a DIFFERENT species; preserve its actual species anatomy rather than recoloring the crow. Match reference's painterly illustrated feather brushwork, bold silhouette, expressive natural bird face, restrained shading and detail. Same close head-and-upper-chest framing, three-quarter pose facing right, same illustration series. Charming sly humor in expression. Not photorealistic or 3D.\nSubject: a barn swallow with navy-blue crown, rust-red forehead and throat, cream breast, very short fine beak; adventurous lively expression.\nBackdrop: completely solid pale periwinkle, uniform opaque fill, no texture or gradient.\nComposition: single centered portrait, square canvas, head, crest and beak comfortably inside central circular safe area. Chest fills bottom. Readable at 44px. No clothes, props, text, logos, borders, scenery or extra birds.",
+      "file": "swallow-v1.jpg"
+    }
+  ]
+}

@@ -7,8 +7,8 @@ const ids = Array.from({ length: 45 }, (_, i) => `10000000-0000-4000-8000-${Stri
 const rows: DatabasePost[] = ids.map((id, index) => ({
   id,
   author_id: "00000000-0000-4000-8000-000000000001",
-  username: "sampler",
-  display_name: "Sam Rivera",
+  username: "crumbclub",
+  display_name: "Pip Sparrow",
   avatar_url: null,
   body: `Post ${index}`,
   image_url: null,
@@ -198,7 +198,7 @@ Deno.test("creation returns a complete post through both route prefixes", async 
     assert(typeof post.id === "string" && post.id.length === 36);
     equal(post, {
       id: post.id,
-      author: { id: rows[0].author_id, username: "sampler", displayName: "Sam Rivera", avatarURL: null },
+      author: { id: rows[0].author_id, username: "crumbclub", displayName: "Pip Sparrow", avatarURL: null },
       text: "Hello\n\nworld!",
       imageURL: null,
       createdAt: post.createdAt,

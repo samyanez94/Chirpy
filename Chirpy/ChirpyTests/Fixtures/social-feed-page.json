@@ -4,11 +4,11 @@
       "id": "10000000-0000-4000-8000-000000000001",
       "author": {
         "id": "00000000-0000-4000-8000-000000000002",
-        "username": "swiftbird",
-        "displayName": "Swift Bird",
-        "avatarURL": "https://example.com/avatars/swiftbird.jpg"
+        "username": "shinycollector",
+        "displayName": "Corvid Crow",
+        "avatarURL": "https://example.com/avatars/shinycollector.jpg"
       },
-      "text": "Building Chirpy one test at a time.",
+      "text": "Found a bottle cap. My retirement plan is coming together.",
       "imageURL": "https://example.com/posts/chirpy.jpg",
       "createdAt": "2026-08-31T19:42:17.123Z",
       "isLiked": true,

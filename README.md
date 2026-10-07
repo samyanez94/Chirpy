@@ -20,8 +20,7 @@ plain HTTP and JSON.
 
 The feed loads from the backend on each launch. Posts already on screen stay visible if a refresh fails.
 
-The project intentionally skips accounts, replies, follows, search, notifications, and realtime
-updates.
+The project intentionally skips accounts, replies, follows, search, notifications, and realtime updates.
 
 ## Run the app
 
@@ -168,11 +167,11 @@ A successful request returns **201 Created** with a complete post directly, usin
 `author`, `text`, `imageURL`, `createdAt`, `isLiked`, and `likeCount`. The database generates the ID and timestamp; new
 posts have `imageURL: null`, `isLiked: false`, and `likeCount: 0`.
 
-All posts are authored by the server's `DEMO_USER_ID`, currently the seeded Sam Rivera (`@sampler`) profile. All clients
-share that identity for both posting and liking. The profile must already exist. This is intended for local/private
-demos; there is no authentication or per-user identity. Each successful POST creates a new post, including repeated
-requests. Creation is limited to five posts per rolling minute and 50 per rolling day for the shared demo profile,
-including concurrent requests. These limits are shared by all app installations.
+All posts are authored by the server's `DEMO_USER_ID`, currently the seeded Pip Sparrow (`@crumbclub`) profile. All
+clients share that identity for both posting and liking. The profile must already exist. This is intended for
+local/private demos; there is no authentication or per-user identity. Each successful POST creates a new post, including
+repeated requests. Creation is limited to five posts per rolling minute and 50 per rolling day for the shared demo
+profile, including concurrent requests. These limits are shared by all app installations.
 
 Errors retain the existing `{ "error": { "code", "message", "requestID" } }` envelope:
 
@@ -187,3 +186,23 @@ For an existing local database, apply pending migrations without resetting its d
 ```sh
 supabase migration up --local
 ```
+
+## The bird demo
+
+The fictional flock has 15 bird profiles and 120 distinct posts grounded in bird behavior. Pip Sparrow is the shared
+posting identity. Existing demo UUIDs, timestamp ties, and like relationships are retained.
+
+Portraits are hosted in the public `chirpy-avatars` Supabase Storage bucket. The 512 × 512 JPEGs in
+`supabase/assets/avatars/` are publishing sources; they are **not bundled with the iOS app**. See
+[`supabase/assets/README.md`](supabase/assets/README.md) for the cast, generation prompts, and publishing steps.
+
+Edit `supabase/demo/birds.json`, then regenerate the seed and the targeted update:
+
+```sh
+deno task demo:build
+deno task demo:check
+```
+
+For an existing database, use `supabase/demo/refresh-bird-demo.sql` instead of a reset. It updates only the known seeded
+profiles and posts, preserving timestamps, existing likes, and user-created posts. The fresh seed is still used by
+`supabase db reset` when intentionally starting over.

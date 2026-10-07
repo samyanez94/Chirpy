@@ -59,7 +59,7 @@ enum PreviewError: Error {
 
 extension SocialFeedPage {
 	static let preview = SocialFeedPage(
-		posts: [.preview],
+		posts: Post.flockPreview,
 		nextCursor: nil
 	)
 }
