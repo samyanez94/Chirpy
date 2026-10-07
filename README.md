@@ -1,10 +1,9 @@
 # Chirpy
 
-Chirpy is a small social-feed iOS app for practicing modern iOS development. It is a fun sandbox for SwiftUI, Swift
-concurrency, networking, pagination, and testing.
+Chirpy is a small social-feed app where birds post about life in the flock. It is a sandbox for SwiftUI, concurrency,
+networking, pagination, and testing.
 
-This repo contains both the iOS app and its lightweight Supabase backend. The app talks to a single Edge Function using
-plain HTTP and JSON.
+This repo contains the iOS app and its Supabase backend. Three Edge Functions share one API handler using HTTP and JSON.
 
 <p align="center">
   <img src="docs/Images/feed.png" alt="Chirpy's social feed" width="320">
@@ -26,35 +25,31 @@ The project intentionally skips accounts, replies, follows, search, notification
 
 You will need a recent Xcode version that supports the project's iOS 26.5 deployment target.
 
-First, get the local backend running using the steps below. Then open `Chirpy/Chirpy.xcodeproj`, choose an iPhone
-Simulator, and hit Run. The app currently points to the hosted Supabase project. For local development, set
-`AppConfiguration.baseURL` to `http://127.0.0.1:54321`.
+Configure the personal API key below, then open `Chirpy/Chirpy.xcodeproj`, choose an iPhone Simulator, and run. The app
+uses the hosted Supabase project by default; running the backend locally is optional.
 
-That address works from the Simulator. If you want to run Chirpy on a physical device, update the URL in
-`Chirpy/Chirpy/AppConfiguration.swift` to your Mac's local network address and make sure the phone can reach it.
+For a local backend, set `AppConfiguration.baseURL` in `Chirpy/Chirpy/AppConfiguration.swift` to
+`http://127.0.0.1:54321` for the Simulator, or your Mac's local network address for a physical device.
 
 ## Personal API key
 
-Data endpoints require a dedicated random key in `X-Chirpy-API-Key`; `/health` remains public. The key gates personal
-access and does not identify individual users. Posts and likes still use `DEMO_USER_ID`. No anonymous signup is
-required.
+Data endpoints require `X-Chirpy-API-Key`; `/health` is public. The key controls access, while posts and likes use the
+shared `DEMO_USER_ID`.
 
-Copy `Chirpy/Configuration/LocalConfiguration.example.plist` to `Chirpy/Chirpy/LocalConfiguration.plist`, then replace
-`ChirpyAPIKey` with a random key generated using `openssl rand -hex 32`. The destination is Git-ignored and included in
-local app builds. Set the same value as `CHIRPY_API_KEY` in the ignored `supabase/functions/.env` file. Never use the
-Supabase service-role key as the client key. Missing client configuration fails before sending a request; missing server
-configuration prevents function startup.
+Copy `Chirpy/Configuration/LocalConfiguration.example.plist` to `Chirpy/Chirpy/LocalConfiguration.plist` and set
+`ChirpyAPIKey` to the key configured on the backend. For a new local backend, generate a key with `openssl rand -hex 32`
+and use the same value as `CHIRPY_API_KEY` in `supabase/functions/.env`. Both files are Git-ignored. Never use a
+Supabase service-role key as the client key.
 
-For hosted deployment, create a temporary ignored env file containing only `CHIRPY_API_KEY=...` and run
-`supabase secrets set --env-file <path> --project-ref <project-ref>`. Do not upload local Supabase URLs or service keys.
-Rotate the key by changing the hosted secret, local env file, and local app plist, then rebuilding the app. The key is
-embedded in your personal app build; do not distribute that build or commit the plist.
+For hosted setup, set `CHIRPY_API_KEY` as a Supabase secret using the deployment steps below. To rotate it, update the
+backend secret, local env file, and app plist, then rebuild. The key is embedded in the app; do not distribute a build
+containing your personal key.
 
 ## Run the backend locally
 
 You will need Docker, Supabase CLI 2.x, and Deno 2.x.
 
-Start Supabase and build a fresh seeded database:
+Start Supabase and build a fresh seeded database (`db reset` removes existing local data):
 
 ```sh
 supabase start
@@ -102,16 +97,7 @@ curl -X DELETE -H "X-Chirpy-API-Key: $CHIRPY_API_KEY" \
   http://127.0.0.1:54321/functions/v1/posts/10000000-0000-4000-8000-000000000001/like
 ```
 
-Handy development feeds:
-
-```text
-/feed?scenario=slow
-/feed?scenario=error
-/feed?scenario=empty
-/feed?scenario=duplicates
-```
-
-These only work when `ENABLE_DEV_SCENARIOS=true`.
+With `ENABLE_DEV_SCENARIOS=true`, add `scenario=slow`, `error`, `empty`, or `duplicates` to a feed request.
 
 ## Run the backend tests
 
@@ -127,10 +113,10 @@ deno lint
 Open the project in Xcode, pick an iPhone Simulator, and use **Product › Test** (`⌘U`). The test suite covers feed
 state, pagination, networking, and likes.
 
-## A quick note on pagination
+## Pagination
 
-Posts are ordered by `created_at DESC, id DESC`. Each response includes an opaque `nextCursor`; pass it back unchanged
-to load the next page. The API uses keyset pagination, including UUID tie-breaking for posts with identical timestamps.
+Posts are ordered by `created_at DESC, id DESC`. Pass the opaque `nextCursor` back unchanged to load the next page;
+UUIDs break ties between posts with identical timestamps.
 
 ## Deploy the backend
 
@@ -163,15 +149,11 @@ curl -X POST http://127.0.0.1:54321/functions/v1/posts \
 Text is trimmed at both ends and must contain 1–300 Unicode code points after trimming. Internal whitespace and line
 breaks are preserved. Attachments, author IDs, and other extra fields are rejected.
 
-A successful request returns **201 Created** with a complete post directly, using the same shape as a feed item: `id`,
-`author`, `text`, `imageURL`, `createdAt`, `isLiked`, and `likeCount`. The database generates the ID and timestamp; new
-posts have `imageURL: null`, `isLiked: false`, and `likeCount: 0`.
+Success returns **201 Created** with a complete feed-style post, a database-generated ID and timestamp, no image, and
+zero likes. Each successful POST creates a separate post, including repeated requests.
 
-All posts are authored by the server's `DEMO_USER_ID`, currently the seeded Pip Sparrow (`@crumbclub`) profile. All
-clients share that identity for both posting and liking. The profile must already exist. This is intended for
-local/private demos; there is no authentication or per-user identity. Each successful POST creates a new post, including
-repeated requests. Creation is limited to five posts per rolling minute and 50 per rolling day for the shared demo
-profile, including concurrent requests. These limits are shared by all app installations.
+All clients post and like as Pip Sparrow (`@crumbclub`), the seeded `DEMO_USER_ID` profile. This profile must exist.
+Posting is limited to five posts per rolling minute and 50 per rolling day, shared across all app installations.
 
 Errors retain the existing `{ "error": { "code", "message", "requestID" } }` envelope:
 
@@ -189,12 +171,11 @@ supabase migration up --local
 
 ## The bird demo
 
-The fictional flock has 15 bird profiles and 120 distinct posts grounded in bird behavior. Pip Sparrow is the shared
-posting identity. Existing demo UUIDs, timestamp ties, and like relationships are retained.
+The fictional flock has 15 bird profiles and 120 posts grounded in bird behavior.
 
-Portraits are hosted in the public `chirpy-avatars` Supabase Storage bucket. The 512 × 512 JPEGs in
-`supabase/assets/avatars/` are publishing sources; they are **not bundled with the iOS app**. See
-[`supabase/assets/README.md`](supabase/assets/README.md) for the cast, generation prompts, and publishing steps.
+Portraits are hosted in the public `chirpy-avatars` Supabase Storage bucket. The JPEGs in `supabase/assets/avatars/` are
+publishing sources, not bundled app assets. See the [portrait guide](supabase/assets/README.md) for the cast, generation
+prompts, and publishing steps.
 
 Edit `supabase/demo/birds.json`, then regenerate the seed and the targeted update:
 
