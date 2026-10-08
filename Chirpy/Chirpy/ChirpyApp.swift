@@ -11,13 +11,22 @@ import SwiftUI
 struct ChirpyApp: App {
 	var body: some Scene {
 		WindowGroup {
-			NavigationStack {
-				FeedView(
-					client: FeedClient(
-						baseURL: AppConfiguration.baseURL,
-						httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
-					)
-				)
+			TabView {
+				Tab("Home", systemImage: "house") {
+					NavigationStack {
+						FeedView(
+							client: FeedClient(
+								baseURL: AppConfiguration.baseURL,
+								httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
+							)
+						)
+					}
+				}
+				Tab("Search", systemImage: "magnifyingglass", role: .search) {
+					NavigationStack {
+						SearchView()
+					}
+				}
 			}
 		}
 	}
