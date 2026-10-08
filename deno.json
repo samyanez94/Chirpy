@@ -3,7 +3,7 @@
     "test": "deno test supabase/functions/social-feed",
     "demo:build": "deno run --allow-read --allow-write supabase/scripts/build_bird_seed.ts",
     "demo:check": "deno run --allow-read supabase/scripts/build_bird_seed.ts --check",
-    "check": "deno check supabase/functions/posts/index.ts supabase/functions/feed/index.ts supabase/functions/search/index.ts supabase/functions/social-feed/index.ts supabase/functions/social-feed/handler_test.ts supabase/scripts/build_bird_seed.ts"
+    "check": "deno check supabase/functions/profile/index.ts supabase/functions/posts/index.ts supabase/functions/feed/index.ts supabase/functions/search/index.ts supabase/functions/social-feed/index.ts supabase/functions/social-feed/handler_test.ts supabase/scripts/build_bird_seed.ts"
   },
   "compilerOptions": {
     "strict": true

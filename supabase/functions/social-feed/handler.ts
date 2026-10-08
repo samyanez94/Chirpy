@@ -1,12 +1,12 @@
 import {
-  decodeCursor,
+  decodeFeedCursor,
   decodeSearchCursor,
-  encodeCursor,
+  encodeFeedCursor,
   encodeSearchCursor,
   InvalidCursorError,
   isUUID,
 } from "./cursor.ts";
-import type { DatabasePost, Environment, FeedPost, Repository } from "./types.ts";
+import type { DatabasePost, DatabaseProfile, Environment, FeedPost, Profile, Repository } from "./types.ts";
 
 import { timingSafeEqual } from "node:crypto";
 import { PostingLimitError } from "./types.ts";
@@ -40,6 +40,15 @@ export function createHandler(repository: Repository, environment: Environment) 
       const supplied = new TextEncoder().encode(suppliedKey);
       if (!expected.length || expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
         return error(401, "unauthorized", "A valid Chirpy API key is required.");
+      }
+
+      if (path === "/profile") {
+        if (request.method !== "GET") {
+          return error(405, "method_not_allowed", "This method is not allowed for the requested route.");
+        }
+        const profile = await repository.currentProfile();
+        if (!profile) throw new Error("Configured current profile is missing");
+        return response(mapProfile(profile), 200, headers);
       }
 
       if (path === "/search") {
@@ -92,6 +101,13 @@ export function createHandler(repository: Repository, environment: Environment) 
         if (limit < 1 || limit > 50) {
           return error(400, "invalid_request", "Limit must be an integer from 1 through 50.");
         }
+        const profileValue = url.searchParams.get("profile_id");
+        if (url.searchParams.getAll("profile_id").length > 1 || (profileValue !== null && !isUUID(profileValue))) {
+          return error(400, "invalid_request", "Profile ID must be a single UUID.");
+        }
+        const profileID = profileValue?.toLowerCase() ?? null;
+        const cursorValue = url.searchParams.get("cursor");
+        const cursor = cursorValue === null ? null : decodeFeedCursor(cursorValue, profileID);
         const scenario = url.searchParams.get("scenario");
         if (scenario && !environment.enableDevScenarios) {
           return error(400, "invalid_request", "Development scenarios are not enabled.");
@@ -103,17 +119,20 @@ export function createHandler(repository: Repository, environment: Environment) 
         if (scenario === "empty") return response({ posts: [], nextCursor: null, hasMore: false }, 200, headers);
         if (scenario === "slow") await new Promise((resolve) => setTimeout(resolve, 2000));
 
-        const cursorValue = url.searchParams.get("cursor");
-        const cursor = cursorValue === null ? null : decodeCursor(cursorValue);
-        const rows = await repository.feed(limit + 1, cursor);
+        const rows = await repository.feed(limit + 1, cursor, profileID);
         const hasMore = rows.length > limit;
         let posts = rows.slice(0, limit).map(mapPost);
         if (scenario === "duplicates" && posts.length > 1) {
           posts = [posts[0], posts[0], ...posts.slice(1, Math.max(1, limit - 1))];
         }
         const last = posts.at(-1);
+        const lastRow = last ? rows.find((row) => row.id === last.id) : undefined;
         return response(
-          { posts, nextCursor: hasMore && last ? encodeCursor(last.createdAt, last.id) : null, hasMore },
+          {
+            posts,
+            nextCursor: hasMore && lastRow ? encodeFeedCursor(profileID, lastRow.created_at, lastRow.id) : null,
+            hasMore,
+          },
           200,
           headers,
         );
@@ -181,10 +200,14 @@ function normalizedPath(path: string): string {
   return result.replace(/\/$/, "") || "/";
 }
 
+function mapProfile(row: DatabaseProfile): Profile {
+  return { id: row.id, username: row.username, displayName: row.display_name, avatarURL: row.avatar_url };
+}
+
 function mapPost(row: DatabasePost): FeedPost {
   return {
     id: row.id,
-    author: { id: row.author_id, username: row.username, displayName: row.display_name, avatarURL: row.avatar_url },
+    author: mapProfile({ ...row, id: row.author_id }),
     text: row.body,
     imageURL: row.image_url,
     // PostgREST commonly serializes timestamptz with a +00:00 suffix. Normalize the

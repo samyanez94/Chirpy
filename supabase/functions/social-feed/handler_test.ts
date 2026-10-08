@@ -1,7 +1,14 @@
-import { decodeCursor, decodeSearchCursor, encodeCursor, encodeSearchCursor } from "./cursor.ts";
+import {
+  decodeCursor,
+  decodeFeedCursor,
+  decodeSearchCursor,
+  encodeCursor,
+  encodeFeedCursor,
+  encodeSearchCursor,
+} from "./cursor.ts";
 import { PostingLimitError } from "./types.ts";
 import { createHandler } from "./handler.ts";
-import type { CursorPayload, DatabasePost, Repository, SearchCursorPayload } from "./types.ts";
+import type { CursorPayload, DatabasePost, DatabaseProfile, Repository, SearchCursorPayload } from "./types.ts";
 
 const ids = Array.from({ length: 45 }, (_, i) => `10000000-0000-4000-8000-${String(45 - i).padStart(12, "0")}`);
 const rows: DatabasePost[] = ids.map((id, index) => ({
@@ -25,6 +32,14 @@ class MemoryRepository implements Repository {
   constructor(posts = rows) {
     this.posts = posts.map((post) => ({ ...post }));
   }
+  currentProfile(): Promise<DatabaseProfile | null> {
+    return Promise.resolve({
+      id: rows[0].author_id,
+      username: rows[0].username,
+      display_name: rows[0].display_name,
+      avatar_url: rows[0].avatar_url,
+    });
+  }
   createPost(text: string): Promise<DatabasePost> {
     this.createdTexts.push(text);
     const post: DatabasePost = {
@@ -40,12 +55,13 @@ class MemoryRepository implements Repository {
     this.posts.sort(compareRows);
     return Promise.resolve(post);
   }
-  feed(limit: number, cursor: CursorPayload | null): Promise<DatabasePost[]> {
+  feed(limit: number, cursor: CursorPayload | null, profileID: string | null = null): Promise<DatabasePost[]> {
+    const filtered = this.posts.filter((post) => profileID === null || post.author_id === profileID);
     const eligible = cursor
-      ? this.posts.filter((post) =>
+      ? filtered.filter((post) =>
         post.created_at < cursor.createdAt || (post.created_at === cursor.createdAt && post.id < cursor.id)
       )
-      : this.posts;
+      : filtered;
     return Promise.resolve(
       eligible.slice(0, limit).map((post) => ({
         ...post,
@@ -292,11 +308,20 @@ Deno.test("creation rejects unsupported methods and reports repository failures"
 Deno.test("all data routes reject missing and incorrect API keys", async () => {
   const repository = new MemoryRepository();
   const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
-  for (const path of ["/feed", "/search?q=post", "/posts", `/posts/${rows[0].id}/like`]) {
+  for (
+    const path of [
+      "/profile",
+      "/feed",
+      `/feed?profile_id=${rows[0].author_id}`,
+      "/search?q=post",
+      "/posts",
+      `/posts/${rows[0].id}/like`,
+    ]
+  ) {
     for (const key of ["", "wrong", "bad-key!"]) {
       const result = await handler(
         new Request(`http://localhost/functions/v1${path}`, {
-          method: path === "/feed" || path.startsWith("/search") ? "GET" : "POST",
+          method: path === "/profile" || path.startsWith("/feed") || path.startsWith("/search") ? "GET" : "POST",
           headers: { "x-chirpy-api-key": key },
         }),
       );
@@ -474,4 +499,167 @@ Deno.test("search cursors preserve database microseconds even though public date
   equal(decodeSearchCursor(page.nextCursor, "post").createdAt, timestamp);
   const unicode = encodeSearchCursor("😀😀", timestamp, rows[0].id);
   equal(decodeSearchCursor(unicode, "😀😀").query, "😀😀");
+});
+
+Deno.test("profile-filtered feed traverses only that author's posts and retains viewer likes", async () => {
+  const profileID = "abcdef00-0000-4000-8000-000000000001";
+  const posts = rows.map((row, index) => ({ ...row, author_id: index % 2 ? profileID : row.author_id }));
+  const repository = new MemoryRepository(posts);
+  repository.likes.add(posts[1].id);
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const received: string[] = [];
+  let cursor: string | null = null;
+  do {
+    const params = new URLSearchParams({ profile_id: profileID.toUpperCase(), limit: "2" });
+    if (cursor) params.set("cursor", cursor);
+    const result = await handler(request(`/feed?${params}`));
+    equal(result.status, 200);
+    const page = await body(result);
+    assert(page.posts.every((post: { author: { id: string } }) => post.author.id === profileID));
+    if (!received.length) {
+      equal(page.posts[0].isLiked, true);
+      equal(page.posts[0].likeCount, 1);
+    }
+    received.push(...page.posts.map((post: { id: string }) => post.id));
+    cursor = page.nextCursor;
+    if (cursor) equal((decodeFeedCursor(cursor, profileID) as { profileID: string }).profileID, profileID);
+    else equal(page.hasMore, false);
+  } while (cursor);
+  equal(received, posts.filter((post) => post.author_id === profileID).map((post) => post.id));
+  equal(new Set(received).size, received.length);
+  equal((await body(await handler(request("/feed?limit=50")))).posts.length, posts.length);
+  equal(await body(await handler(request("/feed?profile_id=ffffffff-ffff-4fff-8fff-ffffffffffff"))), {
+    posts: [],
+    nextCursor: null,
+    hasMore: false,
+  });
+});
+
+Deno.test("invalid profile filters and mismatched cursors never reach the feed repository", async () => {
+  const repository = new MemoryRepository();
+  let calls = 0;
+  repository.feed = () => {
+    calls++;
+    return Promise.resolve([]);
+  };
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const profileID = rows[0].author_id;
+  for (const filter of ["", "bad", "null", `${profileID}&profile_id=${profileID}`]) {
+    const result = await handler(request(`/feed?profile_id=${filter}`));
+    equal(result.status, 400);
+    equal((await body(result)).error.code, "invalid_request");
+  }
+  const scoped = encodeFeedCursor(profileID, rows[0].created_at, rows[0].id);
+  const home = encodeFeedCursor(null, rows[0].created_at, rows[0].id);
+  const legacy = encodeCursor(rows[0].created_at, rows[0].id);
+  for (
+    const [filter, cursor] of [
+      [null, scoped],
+      [profileID, home],
+      [profileID, legacy],
+      ["ffffffff-ffff-4fff-8fff-ffffffffffff", scoped],
+      [profileID, encodeSearchCursor("post", rows[0].created_at, rows[0].id)],
+      [null, "a".repeat(2049)],
+      [null, encodeFeedCursor(null, "2026-02-30T12:00:00Z", rows[0].id)],
+      [null, encodeFeedCursor(null, rows[0].created_at, "bad")],
+    ]
+  ) {
+    const params = new URLSearchParams({ cursor: cursor! });
+    if (filter !== null) params.set("profile_id", filter!);
+    const result = await handler(request(`/feed?${params}`));
+    equal(result.status, 400);
+    equal((await body(result)).error.code, "invalid_cursor");
+  }
+  equal(calls, 0);
+  equal((await handler(request(`/feed?cursor=${legacy}`))).status, 200);
+  equal(calls, 1);
+});
+
+Deno.test("feed cursors preserve database microseconds for Home and profile feeds", async () => {
+  const timestamp = "2026-10-08T12:00:00.123456+00:00";
+  for (const profileID of [null, rows[0].author_id]) {
+    const repository = new MemoryRepository([
+      { ...rows[0], created_at: timestamp },
+      { ...rows[1], created_at: timestamp },
+      { ...rows[2], created_at: "2026-10-08T12:00:00.123455+00:00" },
+    ]);
+    const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+    const params = new URLSearchParams({ limit: "1" });
+    if (profileID) params.set("profile_id", profileID);
+    const page = await body(await handler(request(`/feed?${params}`)));
+    equal(page.posts[0].createdAt, "2026-10-08T12:00:00.123Z");
+    equal(decodeFeedCursor(page.nextCursor, profileID).createdAt, timestamp);
+    params.set("cursor", page.nextCursor);
+    const next = await body(await handler(request(`/feed?${params}`)));
+    equal(next.posts[0].id, rows[1].id);
+    params.set("cursor", next.nextCursor);
+    const final = await body(await handler(request(`/feed?${params}`)));
+    equal(final.posts[0].id, rows[2].id);
+    equal(final.nextCursor, null);
+    // Search must reject the new feed cursor too.
+    equal((await handler(request(`/search?q=post&cursor=${page.nextCursor}`))).status, 400);
+  }
+});
+
+Deno.test("profile returns the current author contract through both route prefixes, without requiring posts", async () => {
+  for (const prefix of ["/functions/v1", "/functions/v1/social-feed"]) {
+    for (const avatarURL of [null, "https://example.com/avatar.jpg"]) {
+      const repository = new MemoryRepository([]);
+      repository.currentProfile = () =>
+        Promise.resolve({
+          id: rows[0].author_id,
+          username: "crumbclub",
+          display_name: "Pip Sparrow",
+          avatar_url: avatarURL,
+        });
+      const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+      const result = await handler(
+        new Request(`http://localhost${prefix}/profile`, {
+          headers: { "x-chirpy-api-key": "test-key" },
+        }),
+      );
+      equal(result.status, 200);
+      equal(await body(result), {
+        id: rows[0].author_id,
+        username: "crumbclub",
+        displayName: "Pip Sparrow",
+        avatarURL,
+      });
+    }
+  }
+});
+
+Deno.test("profile rejects unsupported methods before querying the repository", async () => {
+  const repository = new MemoryRepository();
+  let calls = 0;
+  repository.currentProfile = () => {
+    calls++;
+    return Promise.resolve(null);
+  };
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  for (const method of ["POST", "PUT", "PATCH", "DELETE", "HEAD"]) {
+    const result = await handler(request("/profile", method));
+    equal(result.status, 405);
+    equal((await body(result)).error.code, "method_not_allowed");
+  }
+  equal(calls, 0);
+  const unauthorized = await handler(new Request("http://localhost/functions/v1/profile"));
+  equal(unauthorized.status, 401);
+  equal(calls, 0);
+});
+
+Deno.test("missing current profile and database failures return a sanitized server error", async () => {
+  for (const failure of [false, true]) {
+    const repository = new MemoryRepository();
+    repository.currentProfile = () =>
+      failure ? Promise.reject(new Error("Private database failure details")) : Promise.resolve(null);
+    const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+    const result = await handler(request("/profile"));
+    equal(result.status, 500);
+    equal((await body(result)).error, {
+      code: "internal_error",
+      message: "An unexpected server error occurred.",
+      requestID: result.headers.get("x-request-id"),
+    });
+  }
 });

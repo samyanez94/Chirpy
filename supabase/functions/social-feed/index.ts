@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PostingLimitError } from "./types.ts";
 import { createHandler } from "./handler.ts";
-import type { CursorPayload, DatabasePost, Repository, SearchCursorPayload } from "./types.ts";
+import type { CursorPayload, DatabasePost, DatabaseProfile, Repository, SearchCursorPayload } from "./types.ts";
 
 const url = Deno.env.get("SUPABASE_URL");
 const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -12,6 +12,14 @@ if (!url || !key || !demoUserID || !apiKey) throw new Error("Required server env
 const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 
 const repository: Repository = {
+  async currentProfile(): Promise<DatabaseProfile | null> {
+    const { data, error } = await client.from("profiles")
+      .select("id, username, display_name, avatar_url")
+      .eq("id", demoUserID)
+      .maybeSingle();
+    if (error) throw new Error(`current_profile failed: ${error.code}`);
+    return data;
+  },
   async createPost(text: string): Promise<DatabasePost> {
     const { data, error } = await client.rpc("create_post", {
       p_demo_user_id: demoUserID,
@@ -23,9 +31,10 @@ const repository: Repository = {
     if (!row) throw new Error("create_post returned no result");
     return row as DatabasePost;
   },
-  async feed(limitPlusOne: number, cursor: CursorPayload | null): Promise<DatabasePost[]> {
+  async feed(limitPlusOne: number, cursor: CursorPayload | null, profileID: string | null): Promise<DatabasePost[]> {
     const { data, error } = await client.rpc("feed_page", {
       p_demo_user_id: demoUserID,
+      p_profile_id: profileID,
       p_limit: limitPlusOne,
       p_cursor_created_at: cursor?.createdAt ?? null,
       p_cursor_id: cursor?.id ?? null,

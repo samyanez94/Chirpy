@@ -1,4 +1,4 @@
-import type { CursorPayload, SearchCursorPayload } from "./types.ts";
+import type { CursorPayload, FeedCursorPayload, SearchCursorPayload } from "./types.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -18,6 +18,30 @@ export function decodeCursor(value: string): CursorPayload {
     const payload = decodePayload(value);
     if (!isCursor(payload)) throw new Error();
     return payload;
+  } catch {
+    throw new InvalidCursorError();
+  }
+}
+
+// New feed cursors bind the author filter; legacy cursors remain valid only for Home.
+export function encodeFeedCursor(profileID: string | null, createdAt: string, id: string): string {
+  return toBase64Url(JSON.stringify({ v: 1, kind: "feed", profileID, createdAt, id }));
+}
+
+export function decodeFeedCursor(value: string, profileID: string | null): CursorPayload | FeedCursorPayload {
+  try {
+    if (value.length > 2048) throw new Error();
+    const payload = decodePayload(value);
+    if (typeof payload !== "object" || payload === null) throw new Error();
+    const item = payload as Record<string, unknown>;
+    if (!("kind" in item)) {
+      if (profileID !== null || "profileID" in item || !isCursor(payload)) throw new Error();
+      return payload;
+    }
+    if (item.v !== 1 || item.kind !== "feed" || item.profileID !== profileID || "query" in item) throw new Error();
+    if (typeof item.id !== "string" || !isUUID(item.id)) throw new Error();
+    if (typeof item.createdAt !== "string" || !isTimestamp(item.createdAt)) throw new Error();
+    return payload as FeedCursorPayload;
   } catch {
     throw new InvalidCursorError();
   }
@@ -52,7 +76,11 @@ function isSearchCursor(value: unknown, query: string): value is SearchCursorPay
   const item = value as Record<string, unknown>;
   if (item.v !== 1 || item.kind !== "search" || item.query !== query) return false;
   if (typeof item.createdAt !== "string" || typeof item.id !== "string" || !UUID.test(item.id)) return false;
-  const date = item.createdAt.match(
+  return isTimestamp(item.createdAt);
+}
+
+function isTimestamp(value: string): boolean {
+  const date = value.match(
     /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,6})?(?:Z|[+-](?:0\d|1[0-5]):[0-5]\d)$/,
   );
   if (!date) return false;
@@ -63,7 +91,7 @@ function isSearchCursor(value: unknown, query: string): value is SearchCursorPay
   if (year < 1 || month < 1 || month > 12 || day < 1 || day > daysPerMonth[month - 1]) {
     return false;
   }
-  return !Number.isNaN(Date.parse(item.createdAt));
+  return !Number.isNaN(Date.parse(value));
 }
 
 function isCursor(value: unknown): value is CursorPayload {
