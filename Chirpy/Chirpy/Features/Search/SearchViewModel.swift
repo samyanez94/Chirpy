@@ -1,8 +1,8 @@
 //
-//  FeedViewModel.swift
+//  SearchViewModel.swift
 //  Chirpy
 //
-//  Created by Samuel Yanez on 9/1/26.
+//  Created by Samuel Yanez on 10/8/26.
 //
 
 import Foundation
@@ -10,7 +10,7 @@ import Observation
 
 @MainActor
 @Observable
-final class FeedViewModel {
+final class SearchViewModel {
 
 	enum State: Equatable {
 		case idle
@@ -18,6 +18,8 @@ final class FeedViewModel {
 		case loaded(content: PostListContent)
 		case error(message: String)
 	}
+
+	let query: String
 
 	private static let pageSize = 20
 
@@ -31,15 +33,21 @@ final class FeedViewModel {
 	@ObservationIgnored
 	private var isFetchingFirstPage = false
 
-	init(client: any FeedServicing) {
+	init(query: String, client: any FeedServicing) {
+		self.query = query.trimmingCharacters(in: .whitespacesAndNewlines)
 		self.client = client
 	}
 
-	/// Loads the first page of posts when the feed is idle.
+	/// Loads the first page of results for this query when idle.
 	///
-	/// This method updates ``state`` to reflect loading, success, cancellation, or failure. Calls made after the feed leaves the idle state are ignored.
+	/// This method updates ``state`` to reflect loading, success, cancellation, or failure. Calls made after the search leaves the idle state are ignored.
 	func load() async {
-		guard state == .idle else { return }
+		guard state == .idle,
+			!query.isEmpty,
+			!Task.isCancelled
+		else {
+			return
+		}
 
 		state = .loading
 		isFetchingFirstPage = true
@@ -53,14 +61,14 @@ final class FeedViewModel {
 			if error is CancellationError || Task.isCancelled {
 				state = .idle
 			} else {
-				state = .error(message: "The feed couldn’t be loaded.")
+				state = .error(message: "Search couldn’t be loaded.")
 			}
 		}
 	}
 
-	/// Replaces the loaded feed with a freshly fetched first page.
+	/// Replaces the loaded results with a freshly fetched first page.
 	///
-	/// The posts on screen are kept if the refresh fails. A cancelled refresh also leaves the feed untouched, as does one started while the feed is not loaded or another first-page request is in flight.
+	/// The posts on screen are kept if the refresh fails. A cancelled refresh also leaves the results untouched, as does one started while the search is not loaded or another first-page request is in flight.
 	func refresh() async {
 		guard case .loaded(let content) = state,
 			content.isLoadingNextPage == false,
@@ -83,7 +91,7 @@ final class FeedViewModel {
 		}
 	}
 
-	/// Retries loading the first page after the feed enters an error state.
+	/// Retries loading the first page after the search enters an error state.
 	///
 	/// Calls made from any state other than ``State/error(message:)`` are ignored.
 	func retry() async {
@@ -96,7 +104,7 @@ final class FeedViewModel {
 
 	/// Fetches and appends the next available page of posts.
 	///
-	/// The request is ignored when there is no next cursor or another pagination request is already in progress. Posts already present in the feed are not appended again.
+	/// The request is ignored when there is no next cursor or another pagination request is already in progress. Posts already present in the results are not appended again.
 	func loadNextPage() async {
 		guard case .loaded(let content) = state,
 			let cursor = content.nextCursor,
@@ -108,31 +116,38 @@ final class FeedViewModel {
 
 		updateContent {
 			$0.isLoadingNextPage = true
+			$0.paginationError = nil
 		}
 
 		do {
-			let page = try await client.fetchPage(cursor: cursor, limit: Self.pageSize)
+			let page = try await client.searchPosts(query: query, cursor: cursor, limit: Self.pageSize)
+			try Task.checkCancellation()
 
 			updateContent(expectedCursor: cursor) {
 				$0.append(page)
 			}
-		} catch let error as APIError where error.code == "invalid_cursor" {
+		} catch let error as APIError where error.code == "invalid_cursor" && !Task.isCancelled {
 			updateContent(expectedCursor: cursor) {
 				$0.isLoadingNextPage = false
+				$0.paginationError = "More results couldn’t be loaded."
 			}
 			await refresh()
 		} catch {
 			updateContent(expectedCursor: cursor) {
 				$0.isLoadingNextPage = false
+				if !(error is CancellationError) && !Task.isCancelled {
+					$0.paginationError = "More results couldn’t be loaded."
+				}
 			}
 		}
 	}
 
-	/// Loads the next page when the given post is near the end of the feed.
+	/// Loads the next page when the given post is near the end of the results.
 	///
 	/// - Parameter post: The post whose appearance may trigger pagination.
 	func loadMoreIfNeeded(after post: Post) async {
 		guard case .loaded(let content) = state,
+			content.paginationError == nil,
 			content.isNearEnd(postID: post.id)
 		else {
 			return
@@ -164,6 +179,8 @@ final class FeedViewModel {
 				isLiked: post.isLiked == false
 			)
 
+			try Task.checkCancellation()
+
 			updateContent {
 				$0.apply(update)
 			}
@@ -192,7 +209,7 @@ final class FeedViewModel {
 
 	/// Fetches and publishes the first page.
 	private func fetchFirstPage() async throws {
-		let page = try await client.fetchPage(cursor: nil, limit: Self.pageSize)
+		let page = try await client.searchPosts(query: query, cursor: nil, limit: Self.pageSize)
 		try Task.checkCancellation()
 		state = .loaded(content: PostListContent(page: page))
 	}

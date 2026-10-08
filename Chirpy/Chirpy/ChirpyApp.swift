@@ -24,7 +24,12 @@ struct ChirpyApp: App {
 				}
 				Tab("Search", systemImage: "magnifyingglass", role: .search) {
 					NavigationStack {
-						SearchView()
+						SearchView(
+							client: FeedClient(
+								baseURL: AppConfiguration.baseURL,
+								httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
+							)
+						)
 					}
 				}
 			}

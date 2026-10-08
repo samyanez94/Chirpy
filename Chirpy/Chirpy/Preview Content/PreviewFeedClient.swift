@@ -17,39 +17,23 @@ struct PreviewFeedClient: FeedServicing {
 		try result.get()
 	}
 
+	func searchPosts(
+		query: String,
+		cursor: String?,
+		limit: Int
+	) async throws -> SocialFeedPage {
+		try result.get()
+	}
+
 	func createPost(text: String) async throws -> Post {
-		let page = try result.get()
-		guard let author = page.posts.first?.author else { throw PreviewError.requestFailed }
-		return Post(
-			id: UUID(),
-			author: author,
-			text: text,
-			imageURL: nil,
-			createdAt: .now,
-			isLiked: false,
-			likeCount: 0
-		)
+		await Post.preview
 	}
 
 	func setLike(
 		postID: UUID,
 		isLiked: Bool
 	) async throws -> PostLikeUpdate {
-		let page = try result.get()
-		guard let post = page.posts.first(where: { $0.id == postID }) else {
-			throw PreviewError.requestFailed
-		}
-
-		var likeCount = post.likeCount
-		if isLiked != post.isLiked {
-			likeCount += isLiked ? 1 : -1
-		}
-
-		return PostLikeUpdate(
-			postID: postID,
-			isLiked: isLiked,
-			likeCount: max(0, likeCount)
-		)
+		PostLikeUpdate(postID: postID, isLiked: isLiked, likeCount: isLiked ? 1 : 0)
 	}
 }
 

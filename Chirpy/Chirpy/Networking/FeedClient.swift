@@ -17,6 +17,12 @@ nonisolated protocol FeedServicing: Sendable {
 		limit: Int
 	) async throws -> SocialFeedPage
 
+	func searchPosts(
+		query: String,
+		cursor: String?,
+		limit: Int
+	) async throws -> SocialFeedPage
+
 	func setLike(
 		postID: UUID,
 		isLiked: Bool
@@ -60,6 +66,38 @@ nonisolated struct FeedClient: FeedServicing {
 			cursor.map { URLQueryItem(name: "cursor", value: $0) }
 		]
 		.compactMap(\.self)
+
+		guard let url = components?.url else {
+			throw URLError(.badURL)
+		}
+
+		let page: SocialFeedPage = try await send(URLRequest(url: url))
+		try Task.checkCancellation()
+		return page
+	}
+
+	/// Searches post text, passing the server's cursor back unchanged with the same query.
+	func searchPosts(
+		query: String,
+		cursor: String? = nil,
+		limit: Int = 20
+	) async throws -> SocialFeedPage {
+		try Task.checkCancellation()
+		var components = URLComponents(
+			url: baseURL.appending(path: "functions/v1/search"),
+			resolvingAgainstBaseURL: false
+		)
+
+		components?.queryItems = [
+			URLQueryItem(name: "q", value: query),
+			URLQueryItem(name: "limit", value: String(limit)),
+			cursor.map { URLQueryItem(name: "cursor", value: $0) }
+		]
+		.compactMap(\.self)
+
+		// URLSearchParams on the backend reads an unescaped plus as a space.
+		let encodedQuery = components?.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+		components?.percentEncodedQuery = encodedQuery
 
 		guard let url = components?.url else {
 			throw URLError(.badURL)

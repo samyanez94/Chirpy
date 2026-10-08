@@ -17,7 +17,7 @@ struct FeedViewModelTests {
 		#expect(
 			viewModel.state
 				== .loaded(
-					content: FeedViewModel.FeedContent(
+					content: PostListContent(
 						posts: page.posts,
 						nextCursor: page.nextCursor
 					)
@@ -62,7 +62,7 @@ struct FeedViewModelTests {
 		#expect(
 			viewModel.state
 				== .loaded(
-					content: FeedViewModel.FeedContent(
+					content: PostListContent(
 						posts: refreshedPage.posts,
 						nextCursor: refreshedPage.nextCursor
 					)
@@ -121,7 +121,7 @@ struct FeedViewModelTests {
 		#expect(
 			viewModel.state
 				== .loaded(
-					content: FeedViewModel.FeedContent(
+					content: PostListContent(
 						posts: refreshedPage.posts,
 						nextCursor: refreshedPage.nextCursor
 					)
@@ -178,7 +178,7 @@ struct FeedViewModelTests {
 		#expect(
 			viewModel.state
 				== .loaded(
-					content: FeedViewModel.FeedContent(
+					content: PostListContent(
 						posts: [firstPost, secondPost],
 						nextCursor: nil
 					)
@@ -206,7 +206,7 @@ struct FeedViewModelTests {
 		#expect(
 			viewModel.state
 				== .loaded(
-					content: FeedViewModel.FeedContent(
+					content: PostListContent(
 						posts: [firstPost],
 						nextCursor: "page-two"
 					)
@@ -272,7 +272,7 @@ struct FeedViewModelTests {
 		#expect(
 			viewModel.state
 				== .loaded(
-					content: FeedViewModel.FeedContent(
+					content: PostListContent(
 						posts: [likedPost],
 						nextCursor: nil
 					)
@@ -290,7 +290,7 @@ struct FeedViewModelTests {
 @MainActor
 private func loadedContent(
 	_ viewModel: FeedViewModel
-) -> FeedViewModel.FeedContent? {
+) -> PostListContent? {
 	guard case .loaded(let content) = viewModel.state else {
 		return nil
 	}
@@ -311,6 +311,10 @@ private actor FeedClientSpy: FeedServicing {
 	) {
 		self.results = results
 		self.likeResults = likeResults
+	}
+
+	func searchPosts(query: String, cursor: String?, limit: Int) async throws -> SocialFeedPage {
+		throw TestError.requestFailed
 	}
 
 	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {

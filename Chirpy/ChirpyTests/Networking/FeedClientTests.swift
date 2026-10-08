@@ -212,6 +212,174 @@ struct FeedClientTests {
 		#expect(error.code == .badServerResponse)
 	}
 
+	@Test func testSearchPostsDecodesPageAndBuildsDefaultRequest() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: try fixtureData(named: "social-feed-page"),
+				response: try httpResponse(url: baseURL, statusCode: 200),
+				recorder: recorder
+			)
+		)
+
+		let page = try await client.searchPosts(query: "bottle")
+		let post = try #require(page.posts.first)
+		#expect(page.posts.count == 1)
+		#expect(page.nextCursor == "opaque-next-page-cursor")
+		#expect(post.text == "Found a bottle cap. My retirement plan is coming together.")
+		#expect(post.author.username == "shinycollector")
+		#expect(post.isLiked)
+		#expect(post.likeCount == 12)
+		#expect(post.imageURL?.absoluteString == "https://example.com/posts/chirpy.jpg")
+
+		let request = try #require(await recorder.onlyRequest())
+		let url = try #require(request.url)
+		let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+		#expect(request.httpMethod == "GET")
+		#expect(components.path == "/functions/v1/search")
+		#expect(
+			components.queryItems == [
+				URLQueryItem(name: "q", value: "bottle"),
+				URLQueryItem(name: "limit", value: "20")
+			]
+		)
+	}
+
+	@Test func testSearchPostsEncodesQueryAndOpaqueCursor() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: try fixtureData(named: "social-feed-page"),
+				response: try httpResponse(url: baseURL, statusCode: 200),
+				recorder: recorder
+			)
+		)
+		let query = "crumb & seed+100%/😀?=#"
+		let cursor = "opaque cursor/+"
+		_ = try await client.searchPosts(query: query, cursor: cursor, limit: 7)
+
+		let request = try #require(await recorder.onlyRequest())
+		let url = try #require(request.url)
+		let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+		#expect(
+			components.queryItems == [
+				URLQueryItem(name: "q", value: query),
+				URLQueryItem(name: "limit", value: "7"),
+				URLQueryItem(name: "cursor", value: cursor)
+			]
+		)
+		let encodedQuery = try #require(components.percentEncodedQuery)
+		#expect(!encodedQuery.contains("+"))
+		#expect(encodedQuery.contains("%2B"))
+	}
+
+	@Test func testSearchPostsDecodesEmptyResultsAndAuthenticates() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: AuthenticatedHTTPClient(
+				apiKey: "test-key",
+				transport: HTTPClientStub(
+					data: Data(#"{"posts":[],"nextCursor":null,"hasMore":false}"#.utf8),
+					response: try httpResponse(url: baseURL, statusCode: 200),
+					recorder: recorder
+				)
+			)
+		)
+
+		let page = try await client.searchPosts(query: "no matches")
+		#expect(page.posts.isEmpty)
+		#expect(page.nextCursor == nil)
+		let request = try #require(await recorder.onlyRequest())
+		#expect(request.value(forHTTPHeaderField: "X-Chirpy-API-Key") == "test-key")
+	}
+
+	@Test func testSearchPostsRequiresAuthenticationBeforeSending() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: AuthenticatedHTTPClient(
+				apiKey: nil,
+				transport: HTTPClientStub(
+					data: Data(),
+					response: try httpResponse(url: baseURL, statusCode: 200),
+					recorder: recorder
+				)
+			)
+		)
+
+		let error = try await #require(throws: URLError.self) {
+			try await client.searchPosts(query: "crumb")
+		}
+		#expect(error.code == .userAuthenticationRequired)
+		#expect(await recorder.count == 0)
+	}
+
+	@Test(arguments: [
+		(400, "invalid_request"),
+		(400, "invalid_cursor"),
+		(401, "unauthorized"),
+		(500, "internal_error")
+	])
+	func testSearchPostsPreservesAPIError(statusCode: Int, code: String) async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let data = try JSONSerialization.data(withJSONObject: [
+			"error": [
+				"code": code,
+				"message": "Search failed.",
+				"requestID": "00000000-0000-4000-8000-000000000001"
+			]
+		])
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: data,
+				response: try httpResponse(url: baseURL, statusCode: statusCode)
+			)
+		)
+
+		let error = try await #require(throws: APIError.self) {
+			try await client.searchPosts(query: "crumb")
+		}
+		#expect(error.code == code)
+		#expect(error.message == "Search failed.")
+		#expect(error.requestID.uuidString == "00000000-0000-4000-8000-000000000001")
+	}
+
+	@Test(arguments: [false, true])
+	func testSearchPostsHonorsCancellation(afterSending: Bool) async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = FeedClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: try fixtureData(named: "social-feed-page"),
+				response: try httpResponse(url: baseURL, statusCode: 200),
+				recorder: recorder,
+				onSend: {
+					if afterSending {
+						withUnsafeCurrentTask { $0?.cancel() }
+					}
+				}
+			)
+		)
+
+		let task = Task {
+			if !afterSending {
+				withUnsafeCurrentTask { $0?.cancel() }
+			}
+			return try await client.searchPosts(query: "crumb")
+		}
+		await #expect(throws: CancellationError.self) { try await task.value }
+		#expect(await recorder.count == (afterSending ? 1 : 0))
+	}
+
 	private func fixtureData(named name: String) throws -> Data {
 		let fixtureURL = try #require(
 			Bundle(for: NetworkingTestBundleToken.self)
@@ -239,21 +407,31 @@ private nonisolated struct HTTPClientStub: HTTPClient {
 	let data: Data
 	let response: URLResponse
 	let recorder: RequestRecorder?
+	let onSend: (@Sendable () async throws -> Void)?
 
-	init(data: Data, response: URLResponse, recorder: RequestRecorder? = nil) {
+	init(
+		data: Data,
+		response: URLResponse,
+		recorder: RequestRecorder? = nil,
+		onSend: (@Sendable () async throws -> Void)? = nil
+	) {
 		self.data = data
 		self.response = response
 		self.recorder = recorder
+		self.onSend = onSend
 	}
 
 	func send(request: URLRequest) async throws -> (Data, URLResponse) {
 		await recorder?.record(request)
+		try await onSend?()
 		return (data, response)
 	}
 }
 
 private actor RequestRecorder {
 	private var requests: [URLRequest] = []
+
+	var count: Int { requests.count }
 
 	func record(_ request: URLRequest) {
 		requests.append(request)
