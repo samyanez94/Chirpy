@@ -4,6 +4,14 @@ export interface CursorPayload {
   id: string;
 }
 
+export interface SearchCursorPayload {
+  v: 1;
+  kind: "search";
+  query: string;
+  createdAt: string;
+  id: string;
+}
+
 export interface DatabasePost {
   id: string;
   author_id: string;
@@ -30,6 +38,7 @@ export interface FeedPost {
 export interface Repository {
   createPost(text: string): Promise<DatabasePost>;
   feed(limitPlusOne: number, cursor: CursorPayload | null): Promise<DatabasePost[]>;
+  search(query: string, limitPlusOne: number, cursor: SearchCursorPayload | null): Promise<DatabasePost[]>;
   setLike(postID: string, liked: boolean): Promise<{ postExists: boolean; isLiked: boolean; likeCount: number }>;
 }
 

@@ -1,7 +1,7 @@
-import { decodeCursor, encodeCursor } from "./cursor.ts";
+import { decodeCursor, decodeSearchCursor, encodeCursor, encodeSearchCursor } from "./cursor.ts";
 import { PostingLimitError } from "./types.ts";
 import { createHandler } from "./handler.ts";
-import type { CursorPayload, DatabasePost, Repository } from "./types.ts";
+import type { CursorPayload, DatabasePost, Repository, SearchCursorPayload } from "./types.ts";
 
 const ids = Array.from({ length: 45 }, (_, i) => `10000000-0000-4000-8000-${String(45 - i).padStart(12, "0")}`);
 const rows: DatabasePost[] = ids.map((id, index) => ({
@@ -21,6 +21,7 @@ class MemoryRepository implements Repository {
   likes = new Set<string>();
   readonly posts: DatabasePost[];
   createdTexts: string[] = [];
+  searches: { query: string; limit: number; cursor: SearchCursorPayload | null }[] = [];
   constructor(posts = rows) {
     this.posts = posts.map((post) => ({ ...post }));
   }
@@ -52,6 +53,11 @@ class MemoryRepository implements Repository {
         like_count: this.likes.has(post.id) ? 1 : 0,
       })),
     );
+  }
+  async search(query: string, limit: number, cursor: SearchCursorPayload | null): Promise<DatabasePost[]> {
+    this.searches.push({ query, limit, cursor });
+    const posts = await this.feed(this.posts.length, cursor ? { ...cursor, v: 1 } : null);
+    return posts.filter((post) => post.body.toLowerCase().includes(query.toLowerCase())).slice(0, limit);
   }
   setLike(postID: string, liked: boolean) {
     if (!this.posts.some((post) => post.id === postID)) {
@@ -286,11 +292,11 @@ Deno.test("creation rejects unsupported methods and reports repository failures"
 Deno.test("all data routes reject missing and incorrect API keys", async () => {
   const repository = new MemoryRepository();
   const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
-  for (const path of ["/feed", "/posts", `/posts/${rows[0].id}/like`]) {
+  for (const path of ["/feed", "/search?q=post", "/posts", `/posts/${rows[0].id}/like`]) {
     for (const key of ["", "wrong", "bad-key!"]) {
       const result = await handler(
         new Request(`http://localhost/functions/v1${path}`, {
-          method: path === "/feed" ? "GET" : "POST",
+          method: path === "/feed" || path.startsWith("/search") ? "GET" : "POST",
           headers: { "x-chirpy-api-key": key },
         }),
       );
@@ -313,4 +319,159 @@ Deno.test("posting limits use the existing error envelope", async () => {
   const result = await handler(createRequest({ text: "Hello" }));
   equal(result.status, 429);
   equal((await body(result)).error.code, "rate_limit_exceeded");
+});
+
+Deno.test("search returns feed-style posts through both route prefixes and trims the query", async () => {
+  for (const prefix of ["/functions/v1", "/functions/v1/social-feed"]) {
+    const repository = new MemoryRepository();
+    repository.likes.add(rows[0].id);
+    const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+    const result = await handler(
+      new Request(`http://localhost${prefix}/search?q=%20POST%20`, {
+        headers: { "x-chirpy-api-key": "test-key" },
+      }),
+    );
+    equal(result.status, 200);
+    const payload = await body(result);
+    equal(payload.posts.length, 20);
+    equal(payload.posts[0], {
+      id: rows[0].id,
+      author: { id: rows[0].author_id, username: "crumbclub", displayName: "Pip Sparrow", avatarURL: null },
+      text: rows[0].body,
+      imageURL: null,
+      createdAt: rows[0].created_at,
+      isLiked: true,
+      likeCount: 1,
+    });
+    assert(payload.hasMore);
+    equal(repository.searches[0], { query: "POST", limit: 21, cursor: null });
+    equal(decodeSearchCursor(payload.nextCursor, "POST").query, "POST");
+  }
+});
+
+Deno.test("search traverses every matching post exactly once, including tied timestamps", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const received: string[] = [];
+  let cursor: string | null = null;
+  let final;
+  do {
+    const params = new URLSearchParams({ q: "post", limit: "4" });
+    if (cursor) params.set("cursor", cursor);
+    const result = await handler(request(`/search?${params}`));
+    equal(result.status, 200);
+    final = await body(result);
+    received.push(...final.posts.map((post: { id: string }) => post.id));
+    cursor = final.nextCursor;
+  } while (cursor);
+  equal(received, rows.map((post) => post.id));
+  equal(new Set(received).size, rows.length);
+  equal({ nextCursor: final.nextCursor, hasMore: final.hasMore }, { nextCursor: null, hasMore: false });
+  assert(repository.searches.slice(1).every((search) => search.cursor?.query === "post"));
+});
+
+Deno.test("search validates queries, limits, and methods before calling the repository", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  for (const query of [null, "", " \t\n ", "x", "😀", "x".repeat(101), "😀".repeat(101), "ab\0cd"]) {
+    const params = new URLSearchParams();
+    if (query !== null) params.set("q", query);
+    const result = await handler(request(`/search?${params}`));
+    equal(result.status, 400);
+    const payload = await body(result);
+    equal(payload.error.code, "invalid_request");
+    equal(payload.error.requestID, result.headers.get("x-request-id"));
+  }
+  for (const suffix of ["&q=other", "&limit=", "&limit=0", "&limit=51", "&limit=2.5", "&limit=bad", "&limit=-1"]) {
+    const result = await handler(request(`/search?q=post${suffix}`));
+    equal(result.status, 400);
+    equal((await body(result)).error.code, "invalid_request");
+  }
+  for (const method of ["POST", "PUT", "DELETE", "PATCH"]) {
+    const result = await handler(request("/search?q=post", method));
+    equal(result.status, 405);
+    equal((await body(result)).error.code, "method_not_allowed");
+  }
+  equal(repository.searches, []);
+});
+
+Deno.test("search accepts Unicode query boundaries and treats punctuation as literal text", async () => {
+  const posts = [
+    "100% crumbs",
+    "under_score",
+    "path\\crumbs",
+    "bread crumbs",
+    "😀😀",
+    "x".repeat(100),
+    "😀".repeat(100),
+  ];
+  const repository = new MemoryRepository(posts.map((text, index) => ({ ...rows[index], body: text })));
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  for (const query of ["0%", "_s", "\\c", "bread crumbs", "😀😀", "x".repeat(100), "😀".repeat(100)]) {
+    const result = await handler(request(`/search?${new URLSearchParams({ q: query, limit: "50" })}`));
+    equal(result.status, 200);
+    const payload = await body(result);
+    equal(payload.posts.map((post: { text: string }) => post.text), posts.filter((text) => text.includes(query)));
+    equal(payload.nextCursor, null);
+    equal(payload.hasMore, false);
+  }
+});
+
+Deno.test("search returns an empty page for no matches and reports repository failures", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  equal(await body(await handler(request("/search?q=absent"))), { posts: [], nextCursor: null, hasMore: false });
+  repository.search = () => Promise.reject(new Error("Database unavailable"));
+  const result = await handler(request("/search?q=post"));
+  equal(result.status, 500);
+  equal((await body(result)).error.code, "internal_error");
+});
+
+Deno.test("search cursors are query-bound, reject malformed payloads, and cannot be used for the feed", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const valid = encodeSearchCursor("post", rows[0].created_at, rows[0].id);
+  const searchPayload = { v: 1, kind: "search", query: "post", createdAt: rows[0].created_at, id: rows[0].id };
+  for (
+    const cursor of [
+      "",
+      "bad",
+      "a".repeat(2049),
+      encodeCursor(rows[0].created_at, rows[0].id),
+      encodeSearchCursor("other", rows[0].created_at, rows[0].id),
+      btoa(JSON.stringify({ ...searchPayload, v: 2 })),
+      btoa(JSON.stringify({ ...searchPayload, kind: "feed" })),
+      btoa(JSON.stringify({ ...searchPayload, createdAt: "bad" })),
+      btoa(JSON.stringify({ ...searchPayload, createdAt: "2026-02-30T12:00:00Z" })),
+      btoa(JSON.stringify({ ...searchPayload, createdAt: "0000-01-01T12:00:00Z" })),
+      btoa(JSON.stringify({ ...searchPayload, createdAt: "2026-10-08T24:00:00Z" })),
+      btoa(JSON.stringify({ ...searchPayload, createdAt: "2026-10-08T12:00:00+16:00" })),
+      btoa(JSON.stringify({ ...searchPayload, id: "bad" })),
+      btoa(JSON.stringify(null)),
+      btoa(JSON.stringify([])),
+    ]
+  ) {
+    const result = await handler(request(`/search?${new URLSearchParams({ q: "post", cursor })}`));
+    equal(result.status, 400);
+    equal((await body(result)).error.code, "invalid_cursor");
+  }
+  const feedResult = await handler(request(`/feed?${new URLSearchParams({ cursor: valid })}`));
+  equal(feedResult.status, 400);
+  equal((await body(feedResult)).error.code, "invalid_cursor");
+  equal(repository.searches, []);
+  equal((await handler(request(`/search?${new URLSearchParams({ q: " post ", cursor: valid })}`))).status, 200);
+});
+
+Deno.test("search cursors preserve database microseconds even though public dates use milliseconds", async () => {
+  const timestamp = "2026-10-08T12:00:00.123456+00:00";
+  const repository = new MemoryRepository([
+    { ...rows[0], created_at: timestamp },
+    { ...rows[1], created_at: timestamp },
+  ]);
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const page = await body(await handler(request("/search?q=post&limit=1")));
+  equal(page.posts[0].createdAt, "2026-10-08T12:00:00.123Z");
+  equal(decodeSearchCursor(page.nextCursor, "post").createdAt, timestamp);
+  const unicode = encodeSearchCursor("😀😀", timestamp, rows[0].id);
+  equal(decodeSearchCursor(unicode, "😀😀").query, "😀😀");
 });

@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.posts]
 verify_jwt = false
+
+[functions.search]
+verify_jwt = false

@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { PostingLimitError } from "./types.ts";
 import { createHandler } from "./handler.ts";
-import type { CursorPayload, DatabasePost, Repository } from "./types.ts";
+import type { CursorPayload, DatabasePost, Repository, SearchCursorPayload } from "./types.ts";
 
 const url = Deno.env.get("SUPABASE_URL");
 const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -31,6 +31,17 @@ const repository: Repository = {
       p_cursor_id: cursor?.id ?? null,
     });
     if (error) throw new Error(`feed_page failed: ${error.code}`);
+    return data as DatabasePost[];
+  },
+  async search(query: string, limitPlusOne: number, cursor: SearchCursorPayload | null): Promise<DatabasePost[]> {
+    const { data, error } = await client.rpc("search_posts", {
+      p_demo_user_id: demoUserID,
+      p_query: query,
+      p_limit: limitPlusOne,
+      p_cursor_created_at: cursor?.createdAt ?? null,
+      p_cursor_id: cursor?.id ?? null,
+    });
+    if (error) throw new Error(`search_posts failed: ${error.code}`);
     return data as DatabasePost[];
   },
   async setLike(postID: string, liked: boolean) {

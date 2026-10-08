@@ -1,4 +1,11 @@
-import { decodeCursor, encodeCursor, InvalidCursorError, isUUID } from "./cursor.ts";
+import {
+  decodeCursor,
+  decodeSearchCursor,
+  encodeCursor,
+  encodeSearchCursor,
+  InvalidCursorError,
+  isUUID,
+} from "./cursor.ts";
 import type { DatabasePost, Environment, FeedPost, Repository } from "./types.ts";
 
 import { timingSafeEqual } from "node:crypto";
@@ -33,6 +40,44 @@ export function createHandler(repository: Repository, environment: Environment) 
       const supplied = new TextEncoder().encode(suppliedKey);
       if (!expected.length || expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
         return error(401, "unauthorized", "A valid Chirpy API key is required.");
+      }
+
+      if (path === "/search") {
+        if (request.method !== "GET") {
+          return error(405, "method_not_allowed", "This method is not allowed for the requested route.");
+        }
+        const query = url.searchParams.get("q")?.trim() ?? "";
+        const queryLength = Array.from(query).length;
+        if (url.searchParams.getAll("q").length !== 1 || queryLength < 2 || queryLength > 100 || query.includes("\0")) {
+          return error(
+            400,
+            "invalid_request",
+            "Query must contain 2 through 100 characters after trimming and no null characters.",
+          );
+        }
+        const limitValue = url.searchParams.get("limit");
+        if (limitValue !== null && !/^[0-9]+$/.test(limitValue)) {
+          return error(400, "invalid_request", "Limit must be an integer from 1 through 50.");
+        }
+        const limit = limitValue === null ? 20 : Number(limitValue);
+        if (limit < 1 || limit > 50) {
+          return error(400, "invalid_request", "Limit must be an integer from 1 through 50.");
+        }
+        const cursorValue = url.searchParams.get("cursor");
+        const cursor = cursorValue === null ? null : decodeSearchCursor(cursorValue, query);
+        const rows = await repository.search(query, limit + 1, cursor);
+        const hasMore = rows.length > limit;
+        const page = rows.slice(0, limit);
+        const last = page.at(-1);
+        return response(
+          {
+            posts: page.map(mapPost),
+            nextCursor: hasMore && last ? encodeSearchCursor(query, last.created_at, last.id) : null,
+            hasMore,
+          },
+          200,
+          headers,
+        );
       }
 
       if (path === "/feed") {

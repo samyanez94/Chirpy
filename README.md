@@ -18,6 +18,9 @@ concurrency, networking, pagination, and testing.
 
 Chirpy uses a shared demo profile for posts and likes. It does not require an account.
 
+The backend also supports [paginated post search](https://github.com/samyanez94/Chirpy/wiki/Backend#search). The iOS
+Search tab is planned separately.
+
 ## Built With
 
 - Swift and SwiftUI
