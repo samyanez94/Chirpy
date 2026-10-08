@@ -9,7 +9,7 @@ struct FeedViewModelTests {
 	func testLoad() async {
 		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next-page")
 		let viewModel = FeedViewModel(
-			client: FeedClientSpy(results: [.success(page)])
+			client: ChirpyClientSpy(results: [.success(page)])
 		)
 
 		await viewModel.load()
@@ -28,7 +28,7 @@ struct FeedViewModelTests {
 	@Test
 	func testLoadError() async {
 		let viewModel = FeedViewModel(
-			client: FeedClientSpy(results: [.failure(.requestFailed)])
+			client: ChirpyClientSpy(results: [.failure(.requestFailed)])
 		)
 
 		await viewModel.load()
@@ -51,7 +51,7 @@ struct FeedViewModelTests {
 			posts: [makePost(2)],
 			nextCursor: "new-cursor"
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [.success(initialPage), .success(refreshedPage)]
 		)
 		let viewModel = FeedViewModel(client: client)
@@ -83,7 +83,7 @@ struct FeedViewModelTests {
 			posts: [makePost(1)],
 			nextCursor: "next-page"
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [.success(initialPage), .failure(.requestFailed)]
 		)
 		let viewModel = FeedViewModel(client: client)
@@ -105,7 +105,7 @@ struct FeedViewModelTests {
 			posts: [makePost(2)],
 			nextCursor: "new-cursor"
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [
 				.success(initialPage),
 				.failure(.requestFailed),
@@ -133,7 +133,7 @@ struct FeedViewModelTests {
 	func testRetryAfterLoadFailure() async {
 		let page = SocialFeedPage(posts: [makePost(1)], nextCursor: "next")
 		let viewModel = FeedViewModel(
-			client: FeedClientSpy(
+			client: ChirpyClientSpy(
 				results: [.failure(.requestFailed), .success(page)]
 			)
 		)
@@ -147,7 +147,7 @@ struct FeedViewModelTests {
 
 	@Test
 	func testCancelledLoadWithoutPostsReturnsToIdle() async {
-		let viewModel = FeedViewModel(client: FeedClientSpy(results: []))
+		let viewModel = FeedViewModel(client: ChirpyClientSpy(results: []))
 		let load = Task { await viewModel.load() }
 		load.cancel()
 		await load.value
@@ -167,7 +167,7 @@ struct FeedViewModelTests {
 			posts: [secondPost],
 			nextCursor: nil
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [.success(firstPage), .success(secondPage)]
 		)
 		let viewModel = FeedViewModel(client: client)
@@ -195,7 +195,7 @@ struct FeedViewModelTests {
 			posts: [firstPost],
 			nextCursor: "page-two"
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [.success(firstPage), .failure(.requestFailed)]
 		)
 		let viewModel = FeedViewModel(client: client)
@@ -226,7 +226,7 @@ struct FeedViewModelTests {
 			posts: [nextPost],
 			nextCursor: nil
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [.success(firstPage), .success(secondPage)]
 		)
 		let viewModel = FeedViewModel(client: client)
@@ -257,7 +257,7 @@ struct FeedViewModelTests {
 			isLiked: true,
 			likeCount: 2
 		)
-		let client = FeedClientSpy(
+		let client = ChirpyClientSpy(
 			results: [.success(page)],
 			likeResults: [.success(update)]
 		)
@@ -297,7 +297,9 @@ private func loadedContent(
 	return content
 }
 
-private actor FeedClientSpy: FeedServicing {
+private actor ChirpyClientSpy: ChirpyServicing {
+	func fetchCurrentProfile() async throws -> Author { throw URLError(.unsupportedURL) }
+
 	func createPost(text: String) async throws -> Post { throw URLError(.unsupportedURL) }
 
 	private var results: [Result<SocialFeedPage, TestError>]
@@ -317,7 +319,7 @@ private actor FeedClientSpy: FeedServicing {
 		throw TestError.requestFailed
 	}
 
-	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
+	func fetchPage(profileID: UUID?, cursor: String?, limit: Int) async throws -> SocialFeedPage {
 		try fetchPage(request: FeedRequest(limit: limit, cursor: cursor))
 	}
 

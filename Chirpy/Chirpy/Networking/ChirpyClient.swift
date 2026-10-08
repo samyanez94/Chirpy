@@ -1,5 +1,5 @@
 //
-//  FeedClient.swift
+//  ChirpyClient.swift
 //  Chirpy
 //
 //  Created by Samuel Yanez on 8/31/26.
@@ -7,15 +7,17 @@
 
 import Foundation
 
-// MARK: - FeedServicing
+// MARK: - ChirpyServicing
 
-nonisolated protocol FeedServicing: Sendable {
-	func createPost(text: String) async throws -> Post
+nonisolated protocol ChirpyServicing: Sendable {
 
 	func fetchPage(
+		profileID: UUID?,
 		cursor: String?,
 		limit: Int
 	) async throws -> SocialFeedPage
+    
+    func createPost(text: String) async throws -> Post
 
 	func searchPosts(
 		query: String,
@@ -27,11 +29,20 @@ nonisolated protocol FeedServicing: Sendable {
 		postID: UUID,
 		isLiked: Bool
 	) async throws -> PostLikeUpdate
+    
+    func fetchCurrentProfile() async throws -> Author
 }
 
-// MARK: - FeedClient
+extension ChirpyServicing {
+	/// Fetches the unfiltered Home feed.
+	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
+		try await fetchPage(profileID: nil, cursor: cursor, limit: limit)
+	}
+}
 
-nonisolated struct FeedClient: FeedServicing {
+// MARK: - ChirpyClient
+
+nonisolated struct ChirpyClient: ChirpyServicing {
 
 	private let baseURL: URL
 
@@ -51,7 +62,9 @@ nonisolated struct FeedClient: FeedServicing {
 		self.httpClient = httpClient
 	}
 
+	/// Fetches posts, optionally filtered by author. Keep the same filter when continuing a cursor.
 	func fetchPage(
+		profileID: UUID? = nil,
 		cursor: String? = nil,
 		limit: Int = 20
 	) async throws -> SocialFeedPage {
@@ -63,6 +76,7 @@ nonisolated struct FeedClient: FeedServicing {
 
 		components?.queryItems = [
 			URLQueryItem(name: "limit", value: String(limit)),
+			profileID.map { URLQueryItem(name: "profile_id", value: $0.uuidString.lowercased()) },
 			cursor.map { URLQueryItem(name: "cursor", value: $0) }
 		]
 		.compactMap(\.self)
@@ -75,6 +89,14 @@ nonisolated struct FeedClient: FeedServicing {
 		try Task.checkCancellation()
 		return page
 	}
+    
+    func createPost(text: String) async throws -> Post {
+        var request = URLRequest(url: baseURL.appending(path: "functions/v1/posts"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(["text": text])
+        return try await send(request)
+    }
 
 	/// Searches post text, passing the server's cursor back unchanged with the same query.
 	func searchPosts(
@@ -108,14 +130,6 @@ nonisolated struct FeedClient: FeedServicing {
 		return page
 	}
 
-	func createPost(text: String) async throws -> Post {
-		var request = URLRequest(url: baseURL.appending(path: "functions/v1/posts"))
-		request.httpMethod = "POST"
-		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-		request.httpBody = try JSONEncoder().encode(["text": text])
-		return try await send(request)
-	}
-
 	func setLike(
 		postID: UUID,
 		isLiked: Bool
@@ -129,6 +143,15 @@ nonisolated struct FeedClient: FeedServicing {
 
 		return try await send(request)
 	}
+    
+    /// Fetches the server-selected current profile, even when it has no posts.
+    func fetchCurrentProfile() async throws -> Author {
+        try Task.checkCancellation()
+        let url = baseURL.appending(path: "functions/v1/profile")
+        let author: Author = try await send(URLRequest(url: url))
+        try Task.checkCancellation()
+        return author
+    }
 
 	private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
 		let (data, response) = try await httpClient.send(request: request)

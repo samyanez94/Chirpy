@@ -21,7 +21,7 @@ final class FeedViewModel {
 
 	private static let pageSize = 20
 
-	private let client: any FeedServicing
+	private let client: any ChirpyServicing
 
 	private(set) var state: State = .idle
 
@@ -31,7 +31,7 @@ final class FeedViewModel {
 	@ObservationIgnored
 	private var isFetchingFirstPage = false
 
-	init(client: any FeedServicing) {
+	init(client: any ChirpyServicing) {
 		self.client = client
 	}
 

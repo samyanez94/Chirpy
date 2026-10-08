@@ -10,13 +10,13 @@ import SwiftUI
 
 struct FeedView: View {
 
-	private let client: any FeedServicing
+	private let client: any ChirpyServicing
 
 	@State private var viewModel: FeedViewModel
 
 	@State private var isComposing = false
 
-	init(client: any FeedServicing) {
+	init(client: any ChirpyServicing) {
 		self.client = client
 		_viewModel = State(initialValue: FeedViewModel(client: client))
 	}
@@ -105,7 +105,7 @@ struct FeedView: View {
 #Preview("Loaded") {
 	NavigationStack {
 		FeedView(
-			client: PreviewFeedClient(result: .success(.preview))
+			client: PreviewChirpyClient(result: .success(.preview))
 		)
 	}
 }
@@ -113,7 +113,7 @@ struct FeedView: View {
 #Preview("Error") {
 	NavigationStack {
 		FeedView(
-			client: PreviewFeedClient(result: .failure(.requestFailed))
+			client: PreviewChirpyClient(result: .failure(.requestFailed))
 		)
 	}
 }

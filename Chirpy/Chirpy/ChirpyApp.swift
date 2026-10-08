@@ -15,7 +15,7 @@ struct ChirpyApp: App {
 				Tab("Home", systemImage: "house") {
 					NavigationStack {
 						FeedView(
-							client: FeedClient(
+							client: ChirpyClient(
 								baseURL: AppConfiguration.baseURL,
 								httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
 							)
@@ -25,7 +25,7 @@ struct ChirpyApp: App {
 				Tab("Search", systemImage: "magnifyingglass", role: .search) {
 					NavigationStack {
 						SearchView(
-							client: FeedClient(
+							client: ChirpyClient(
 								baseURL: AppConfiguration.baseURL,
 								httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
 							)

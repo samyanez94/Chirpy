@@ -8,13 +8,13 @@
 import SwiftUI
 
 struct SearchView: View {
-	private let client: any FeedServicing
+	private let client: any ChirpyServicing
 
 	@State private var searchText = ""
 
 	@State private var viewModel: SearchViewModel
 
-	init(client: any FeedServicing) {
+	init(client: any ChirpyServicing) {
 		self.client = client
 		_viewModel = State(initialValue: SearchViewModel(query: "", client: client))
 	}
@@ -134,13 +134,13 @@ struct SearchView: View {
 
 #Preview {
 	NavigationStack {
-		SearchView(client: PreviewFeedClient(result: .success(.preview)))
+		SearchView(client: PreviewChirpyClient(result: .success(.preview)))
 	}
 }
 
 #Preview("Dark · Large Text") {
 	NavigationStack {
-		SearchView(client: PreviewFeedClient(result: .success(.preview)))
+		SearchView(client: PreviewChirpyClient(result: .success(.preview)))
 	}
 	.preferredColorScheme(.dark)
 	.environment(\.dynamicTypeSize, .accessibility3)

@@ -23,7 +23,7 @@ final class SearchViewModel {
 
 	private static let pageSize = 20
 
-	private let client: any FeedServicing
+	private let client: any ChirpyServicing
 
 	private(set) var state: State = .idle
 
@@ -33,7 +33,7 @@ final class SearchViewModel {
 	@ObservationIgnored
 	private var isFetchingFirstPage = false
 
-	init(query: String, client: any FeedServicing) {
+	init(query: String, client: any ChirpyServicing) {
 		self.query = query.trimmingCharacters(in: .whitespacesAndNewlines)
 		self.client = client
 	}

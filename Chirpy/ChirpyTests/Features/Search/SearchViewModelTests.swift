@@ -262,7 +262,9 @@ struct SearchViewModelTests {
 	}
 }
 
-private actor SearchClientSpy: FeedServicing {
+private actor SearchClientSpy: ChirpyServicing {
+	func fetchCurrentProfile() async throws -> Author { throw URLError(.unsupportedURL) }
+
 	struct Request: Equatable, Sendable {
 		let query: String
 		let cursor: String?
@@ -311,7 +313,7 @@ private actor SearchClientSpy: FeedServicing {
 		pending.removeValue(forKey: index)?.resume(with: result)
 	}
 
-	func fetchPage(cursor: String?, limit: Int) async throws -> SocialFeedPage {
+	func fetchPage(profileID: UUID?, cursor: String?, limit: Int) async throws -> SocialFeedPage {
 		throw URLError(.unsupportedURL)
 	}
 
