@@ -1,0 +1,50 @@
+[
+  {
+    "species": "crow",
+    "file": "crow-bottle-cap-v1.jpg",
+    "postIndex": 0,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: A mischievous black crow proudly inspecting a single shiny blue bottle cap on a park wall; prized treasure, warm apricot sunlight."
+  },
+  {
+    "species": "sparrow",
+    "file": "sparrow-nest-v1.jpg",
+    "postIndex": 2,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: A cheerful house sparrow inspecting a modest twig nest containing several uneven twigs and a curled blank paper receipt, on a garden branch; cozy sky-blue backdrop."
+  },
+  {
+    "species": "pigeon",
+    "file": "pigeon-bagel-v1.jpg",
+    "postIndex": 0,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: An unbothered slate-gray city pigeon with green-violet neck discovering half a sesame bagel on a clean city sidewalk; dusty rose city shapes in the distance."
+  },
+  {
+    "species": "goose",
+    "file": "goose-crossing-v1.jpg",
+    "postIndex": 3,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: A stern Canada goose guarding a park path while three fluffy goslings cross safely behind it; warm butter-yellow sunlight, simple lawn and pond."
+  },
+  {
+    "species": "duck",
+    "file": "duck-paddling-v1.jpg",
+    "postIndex": 0,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: A relaxed male mallard floating in a pond, shown in a charming above-and-below-water cutaway: serene head above water and two webbed feet paddling energetically underwater; anatomically coherent body, gentle ripples, soft peach sky."
+  },
+  {
+    "species": "hummingbird",
+    "file": "hummingbird-flowers-v1.jpg",
+    "postIndex": 0,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: A tiny male ruby-throated hummingbird with emerald wings and ruby throat hovering to sip nectar among bright garden flowers; visible slender needle bill, graceful wing motion, pale lilac backdrop."
+  },
+  {
+    "species": "penguin",
+    "file": "penguin-pebble-v1.jpg",
+    "postIndex": 0,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: An earnest Adélie penguin with white eye rings carefully inspecting one perfect smooth pebble beside a small pebble nest on an Antarctic shore; soft coral and icy blue palette."
+  },
+  {
+    "species": "peacock",
+    "file": "peacock-display-v1.jpg",
+    "postIndex": 5,
+    "prompt": "Use case: illustration-story\nAsset type: Chirpy social feed attachment, one standalone landscape illustration, 16:9 composition.\nInput images: bird avatar, visual style and character reference only; expand this character into a scene. Match the avatar's painterly feather brushwork, clean strong silhouette, expressive natural bird face, polished illustrated shading, warm pastel palette and gently mischievous humor. Keep recognizable species anatomy. Simple scenery with restrained detail so the action reads at phone size. Full scene, not portrait.\nConstraints: no text, letters, captions, logos, watermarks, borders, clothing or human hands. Keep main subjects and action comfortably within a central 16:9 crop-safe region. Not photorealistic, not 3D.\nScene: A proud cobalt-blue male peacock displaying a magnificent fan of eyespot tail feathers to a nearby brown peahen who continues pecking at seeds, unimpressed; pale golden garden backdrop."
+  }
+]
