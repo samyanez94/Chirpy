@@ -9,27 +9,28 @@ import SwiftUI
 
 @main
 struct ChirpyApp: App {
+
+	private let client = ChirpyClient(
+		baseURL: AppConfiguration.baseURL,
+		httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
+	)
+
 	var body: some Scene {
 		WindowGroup {
 			TabView {
 				Tab("Home", systemImage: "house") {
 					NavigationStack {
-						FeedView(
-							client: ChirpyClient(
-								baseURL: AppConfiguration.baseURL,
-								httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
-							)
-						)
+						FeedView(client: client)
 					}
 				}
-				Tab("Search", systemImage: "magnifyingglass", role: .search) {
+				Tab("Search", systemImage: "magnifyingglass") {
 					NavigationStack {
-						SearchView(
-							client: ChirpyClient(
-								baseURL: AppConfiguration.baseURL,
-								httpClient: AuthenticatedHTTPClient(apiKey: AppConfiguration.apiKey)
-							)
-						)
+						SearchView(client: client)
+					}
+				}
+				Tab("Profile", systemImage: "person.crop.circle") {
+					NavigationStack {
+						ProfileView(client: client)
 					}
 				}
 			}

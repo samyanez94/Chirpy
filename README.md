@@ -10,6 +10,7 @@ concurrency, networking, pagination, and testing.
 ## Features
 
 - Browse a reverse-chronological feed of bird posts
+- View the current profile and its posts
 - Load more posts as you scroll
 - Open a post to see its full text, image, and timestamp
 - Create text-only posts

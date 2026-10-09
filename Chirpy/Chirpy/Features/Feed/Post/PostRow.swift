@@ -46,6 +46,7 @@ struct PostRow: View {
 			.padding(.leading, 56)
 		}
 		.padding(.vertical, 8)
+		.navigationLinkIndicatorVisibility(.hidden)
 	}
 }
 
