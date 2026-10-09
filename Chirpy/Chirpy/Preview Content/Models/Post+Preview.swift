@@ -26,7 +26,7 @@ extension Post {
 
 	static let preview = Post(
 		id: UUID(uuidString: "10000000-0000-4000-8000-000000000002")!,
-		author: Author(
+		author: Profile(
 			id: UUID(uuidString: "00000000-0000-4000-8000-000000000002")!,
 			username: "shinycollector",
 			displayName: "Corvid Crow",
@@ -41,14 +41,34 @@ extension Post {
 
 	static let flockPreview: [Post] = [
 		.preview,
-		birdPreview(number: 1, species: "sparrow", name: "Pip Sparrow", username: "crumbclub",
-			text: "Found a crumb so big I had to invite the group chat. Nobody tell the pigeon."),
-		birdPreview(number: 3, species: "pigeon", name: "Petal Pigeon", username: "platform3",
-			text: "The human dropped half a bagel. Incredible day for the local economy."),
-		birdPreview(number: 4, species: "owl", name: "Olive Owl", username: "afterdark",
-			text: "Who scheduled this meeting for daylight."),
-		birdPreview(number: 5, species: "goose", name: "Gus Goose", username: "rightofway",
-			text: "Reminder: the path belongs to me. This is also the reminder.")
+		birdPreview(
+			number: 1,
+			species: "sparrow",
+			name: "Pip Sparrow",
+			username: "crumbclub",
+			text: "Found a crumb so big I had to invite the group chat. Nobody tell the pigeon."
+		),
+		birdPreview(
+			number: 3,
+			species: "pigeon",
+			name: "Petal Pigeon",
+			username: "platform3",
+			text: "The human dropped half a bagel. Incredible day for the local economy."
+		),
+		birdPreview(
+			number: 4,
+			species: "owl",
+			name: "Olive Owl",
+			username: "afterdark",
+			text: "Who scheduled this meeting for daylight."
+		),
+		birdPreview(
+			number: 5,
+			species: "goose",
+			name: "Gus Goose",
+			username: "rightofway",
+			text: "Reminder: the path belongs to me. This is also the reminder."
+		)
 	]
 
 	private static func avatarURL(species: String) -> URL {
@@ -59,7 +79,7 @@ extension Post {
 		let suffix = String(format: "%012d", number)
 		return Post(
 			id: UUID(uuidString: "10000000-0000-4000-8000-\(suffix)")!,
-			author: Author(
+			author: Profile(
 				id: UUID(uuidString: "00000000-0000-4000-8000-\(suffix)")!,
 				username: username,
 				displayName: name,

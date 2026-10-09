@@ -13,7 +13,7 @@ nonisolated struct Post: Identifiable, Codable, Equatable, Sendable {
 	let id: UUID
 
 	/// The profile that published the post.
-	let author: Author
+	let author: Profile
 
 	/// The text content of the post.
 	let text: String

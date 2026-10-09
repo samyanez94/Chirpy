@@ -1,159 +1,93 @@
+//
+//  ProfileView.swift
+//  Chirpy
+//
+//  Created by Samuel Yanez on 10/9/26.
+//
+
 import SwiftUI
 
 struct ProfileView: View {
-	@State private var viewModel: ProfileViewModel
+	private let client: any ChirpyServicing
+
+	@Environment(CurrentProfileStore.self) private var currentProfile
 
 	init(client: any ChirpyServicing) {
-		_viewModel = State(initialValue: ProfileViewModel(client: client))
+		self.client = client
 	}
 
 	var body: some View {
 		Group {
-			switch viewModel.state {
+			switch currentProfile.state {
 			case .idle, .loading:
 				ProgressView("Loading profile…")
 			case .loaded(let profile):
-				profileContent(profile)
+				ProfileContentView(profile: profile, client: client)
+					.id(profile.id)
 			case .error(let message):
 				ContentUnavailableView {
 					Label("Profile unavailable", systemImage: "wifi.exclamationmark")
 				} description: {
 					Text(message)
 				} actions: {
-					retryButton
+					Button("Try Again") {
+						Task { await currentProfile.retry() }
+					}
 				}
 			}
 		}
 		.navigationTitle("Profile")
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbarBackground(.visible, for: .navigationBar)
-		.task {
-            await viewModel.load()
-        }
-		.navigationDestination(for: UUID.self) { postID in
-			if case .loaded(let content) = viewModel.postsState,
-				let post = content.posts.first(where: { $0.id == postID })
-			{
-				PostDetailView(post: post) {
-					Task { await viewModel.toggleLike(postID: postID) }
-				}
-			} else {
-				ContentUnavailableView(
-					"Post unavailable",
-					systemImage: "text.bubble",
-					description: Text("This post is no longer in your profile.")
-				)
-				.navigationTitle("Post")
-				.navigationBarTitleDisplayMode(.inline)
-			}
-		}
-	}
-
-	private func profileContent(_ profile: Author) -> some View {
-		ScrollView {
-			LazyVStack(alignment: .leading, spacing: 0) {
-				ProfileHeaderView(profile: profile)
-					.padding(.bottom, 8)
-				Divider()
-                    .padding(.bottom, 8)
-				Text("Posts")
-					.font(.headline)
-					.accessibilityAddTraits(.isHeader)
-					.padding(.vertical, 8)
-				posts
-			}
-			.padding(.horizontal, 16)
-			.padding(.bottom, 16)
-		}
-		.refreshable {
-			await viewModel.refresh()
-		}
-	}
-
-	@ViewBuilder
-	private var posts: some View {
-		switch viewModel.postsState {
-		case .idle, .loading:
-			ProgressView("Loading posts…")
-				.frame(maxWidth: .infinity)
-		case .error(let message):
-			ContentUnavailableView {
-				Label("Posts unavailable", systemImage: "wifi.exclamationmark")
-			} description: {
-				Text(message)
-			} actions: {
-				retryButton
-			}
-		case .loaded(let content):
-			if content.posts.isEmpty {
-				ContentUnavailableView(
-					"No posts yet",
-					systemImage: "text.bubble",
-					description: Text("Your posts will appear here.")
-				)
-			} else {
-				ForEach(content.posts) { post in
-					PostRow(post: post) {
-						Task {
-                            await viewModel.toggleLike(postID: post.id)
-                        }
-					}
-					.padding(.vertical, 8)
-					.task {
-						await viewModel.loadMoreIfNeeded(after: post)
-					}
-					if post.id != content.posts.last?.id {
-						Divider()
-							.padding(.leading, 56)
-					}
-				}
-			}
-			if let message = content.paginationError {
-				VStack(spacing: 8) {
-					Text(message)
-					Button("Try Again") {
-						Task { await viewModel.loadNextPage() }
-					}
-				}
-				.frame(maxWidth: .infinity)
-			} else if content.isLoadingNextPage {
-				ProgressView("Loading more posts…")
-					.frame(maxWidth: .infinity)
-			}
-		}
-	}
-
-	private var retryButton: some View {
-		Button("Try Again") {
-			Task {
-                await viewModel.retry()
-            }
-		}
 	}
 }
 
 #Preview("Loaded") {
+	@Previewable @State var currentProfile = CurrentProfileStore(
+		client: PreviewChirpyClient(result: .success(.preview))
+	)
+	let client = PreviewChirpyClient(result: .success(.preview))
 	NavigationStack {
-		ProfileView(client: PreviewChirpyClient(result: .success(.preview)))
+		ProfileView(client: client)
 	}
+	.environment(currentProfile)
+	.task { await currentProfile.loadIfNeeded() }
 }
 
 #Preview("Empty") {
+	@Previewable @State var currentProfile = CurrentProfileStore(
+		client: PreviewChirpyClient(result: .success(.init(posts: [], nextCursor: nil)))
+	)
+	let client = PreviewChirpyClient(result: .success(.init(posts: [], nextCursor: nil)))
 	NavigationStack {
-		ProfileView(client: PreviewChirpyClient(result: .success(.init(posts: [], nextCursor: nil))))
+		ProfileView(client: client)
 	}
+	.environment(currentProfile)
+	.task { await currentProfile.loadIfNeeded() }
 }
 
 #Preview("Error") {
+	@Previewable @State var currentProfile = CurrentProfileStore(
+		client: PreviewChirpyClient(result: .failure(.requestFailed))
+	)
+	let client = PreviewChirpyClient(result: .failure(.requestFailed))
 	NavigationStack {
-		ProfileView(client: PreviewChirpyClient(result: .failure(.requestFailed)))
+		ProfileView(client: client)
 	}
+	.environment(currentProfile)
+	.task { await currentProfile.loadIfNeeded() }
 }
 
 #Preview("Dark · Large Text") {
+	@Previewable @State var currentProfile = CurrentProfileStore(
+		client: PreviewChirpyClient(result: .success(.preview))
+	)
+	let client = PreviewChirpyClient(result: .success(.preview))
 	NavigationStack {
-		ProfileView(client: PreviewChirpyClient(result: .success(.preview)))
+		ProfileView(client: client)
 	}
+	.environment(currentProfile)
+	.task { await currentProfile.loadIfNeeded() }
 	.preferredColorScheme(.dark)
 	.environment(\.dynamicTypeSize, .accessibility3)
 }

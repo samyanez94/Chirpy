@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct AuthorHeaderView: View {
-	let author: Author
+	let author: Profile
 	let createdAt: Date
 
 	var body: some View {

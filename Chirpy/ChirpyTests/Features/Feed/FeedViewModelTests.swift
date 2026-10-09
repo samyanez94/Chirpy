@@ -1,3 +1,10 @@
+//
+//  FeedViewModelTests.swift
+//  ChirpyTests
+//
+//  Created by Samuel Yanez on 9/1/26.
+//
+
 import Foundation
 import Testing
 
@@ -298,7 +305,7 @@ private func loadedContent(
 }
 
 private actor ChirpyClientSpy: ChirpyServicing {
-	func fetchCurrentProfile() async throws -> Author { throw URLError(.unsupportedURL) }
+	func fetchCurrentProfile() async throws -> Profile { throw URLError(.unsupportedURL) }
 
 	func createPost(text: String) async throws -> Post { throw URLError(.unsupportedURL) }
 
@@ -378,7 +385,7 @@ private nonisolated enum TestError: Error, Sendable {
 private nonisolated func makePost(_ id: UInt8) -> Post {
 	Post(
 		id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, id)),
-		author: Author(
+		author: Profile(
 			id: UUID(uuid: (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, id)),
 			username: "bird\(id)",
 			displayName: "Bird \(id)",

@@ -1,10 +1,17 @@
+//
+//  ProfileHeaderView.swift
+//  Chirpy
+//
+//  Created by Samuel Yanez on 10/9/26.
+//
+
 import SwiftUI
 
 struct ProfileHeaderView: View {
-	let profile: Author
+	let profile: Profile
 
 	var body: some View {
-        HStack(alignment: .bottom, spacing: 12) {
+		HStack(alignment: .bottom, spacing: 12) {
 			AsyncImage(url: profile.avatarURL) { image in
 				image.resizable().scaledToFill()
 			} placeholder: {

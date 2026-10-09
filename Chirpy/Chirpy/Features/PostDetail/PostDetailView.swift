@@ -1,3 +1,10 @@
+//
+//  PostDetailView.swift
+//  Chirpy
+//
+//  Created by Samuel Yanez on 9/27/26.
+//
+
 import SwiftUI
 
 struct PostDetailView: View {

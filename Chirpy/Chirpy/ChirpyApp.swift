@@ -17,23 +17,7 @@ struct ChirpyApp: App {
 
 	var body: some Scene {
 		WindowGroup {
-			TabView {
-				Tab("Home", systemImage: "house") {
-					NavigationStack {
-						FeedView(client: client)
-					}
-				}
-				Tab("Search", systemImage: "magnifyingglass") {
-					NavigationStack {
-						SearchView(client: client)
-					}
-				}
-				Tab("Profile", systemImage: "person.crop.circle") {
-					NavigationStack {
-						ProfileView(client: client)
-					}
-				}
-			}
+			ChirpyRootView(client: client)
 		}
 	}
 }

@@ -1,3 +1,10 @@
+//
+//  AuthenticatedHTTPClient.swift
+//  Chirpy
+//
+//  Created by Samuel Yanez on 9/27/26.
+//
+
 import Foundation
 
 /// Adds the personal backend key without changing request or retry behavior.

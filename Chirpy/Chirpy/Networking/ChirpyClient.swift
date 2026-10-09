@@ -16,8 +16,8 @@ nonisolated protocol ChirpyServicing: Sendable {
 		cursor: String?,
 		limit: Int
 	) async throws -> SocialFeedPage
-    
-    func createPost(text: String) async throws -> Post
+
+	func createPost(text: String) async throws -> Post
 
 	func searchPosts(
 		query: String,
@@ -29,8 +29,8 @@ nonisolated protocol ChirpyServicing: Sendable {
 		postID: UUID,
 		isLiked: Bool
 	) async throws -> PostLikeUpdate
-    
-    func fetchCurrentProfile() async throws -> Author
+
+	func fetchCurrentProfile() async throws -> Profile
 }
 
 extension ChirpyServicing {
@@ -89,14 +89,14 @@ nonisolated struct ChirpyClient: ChirpyServicing {
 		try Task.checkCancellation()
 		return page
 	}
-    
-    func createPost(text: String) async throws -> Post {
-        var request = URLRequest(url: baseURL.appending(path: "functions/v1/posts"))
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONEncoder().encode(["text": text])
-        return try await send(request)
-    }
+
+	func createPost(text: String) async throws -> Post {
+		var request = URLRequest(url: baseURL.appending(path: "functions/v1/posts"))
+		request.httpMethod = "POST"
+		request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+		request.httpBody = try JSONEncoder().encode(["text": text])
+		return try await send(request)
+	}
 
 	/// Searches post text, passing the server's cursor back unchanged with the same query.
 	func searchPosts(
@@ -143,15 +143,15 @@ nonisolated struct ChirpyClient: ChirpyServicing {
 
 		return try await send(request)
 	}
-    
-    /// Fetches the server-selected current profile, even when it has no posts.
-    func fetchCurrentProfile() async throws -> Author {
-        try Task.checkCancellation()
-        let url = baseURL.appending(path: "functions/v1/profile")
-        let author: Author = try await send(URLRequest(url: url))
-        try Task.checkCancellation()
-        return author
-    }
+
+	/// Fetches the server-selected current profile, even when it has no posts.
+	func fetchCurrentProfile() async throws -> Profile {
+		try Task.checkCancellation()
+		let url = baseURL.appending(path: "functions/v1/profile")
+		let profile: Profile = try await send(URLRequest(url: url))
+		try Task.checkCancellation()
+		return profile
+	}
 
 	private func send<Response: Decodable>(_ request: URLRequest) async throws -> Response {
 		let (data, response) = try await httpClient.send(request: request)

@@ -263,7 +263,7 @@ struct SearchViewModelTests {
 }
 
 private actor SearchClientSpy: ChirpyServicing {
-	func fetchCurrentProfile() async throws -> Author { throw URLError(.unsupportedURL) }
+	func fetchCurrentProfile() async throws -> Profile { throw URLError(.unsupportedURL) }
 
 	struct Request: Equatable, Sendable {
 		let query: String

@@ -9,9 +9,9 @@ import Foundation
 
 struct PreviewChirpyClient: ChirpyServicing {
 	let result: Result<SocialFeedPage, PreviewError>
-	var profile: Author? = nil
+	var profile: Profile? = nil
 
-	func fetchCurrentProfile() async throws -> Author {
+	func fetchCurrentProfile() async throws -> Profile {
 		_ = try result.get()
 		if let profile {
 			return profile
