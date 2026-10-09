@@ -53,6 +53,9 @@ struct ChirpyClientTests {
 		#expect(components.path == "/functions/v1/feed")
 		#expect(components.queryItems?.first { $0.name == "limit" }?.value == "10")
 		#expect(components.queryItems?.first { $0.name == "cursor" }?.value == "opaque cursor/+")
+		let encodedQuery = try #require(components.percentEncodedQuery)
+		#expect(!encodedQuery.contains("+"))
+		#expect(encodedQuery.contains("%2B"))
 	}
 
 	@Test func testFetchPageThrowsAPIError() async throws {
@@ -127,6 +130,165 @@ struct ChirpyClientTests {
 		await #expect(throws: APIError.self) { try await client.createPost(text: "Hello") }
 	}
 
+	@Test func testDeletePostAcceptsEmptyResponseAndBuildsAuthenticatedRequest() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let postID = try #require(UUID(uuidString: "ABCDEF00-0000-4000-8000-000000000001"))
+		let recorder = RequestRecorder()
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: AuthenticatedHTTPClient(
+				apiKey: "test-key",
+				transport: HTTPClientStub(
+					data: Data(),
+					response: try httpResponse(url: baseURL, statusCode: 204),
+					recorder: recorder
+				)
+			)
+		)
+
+		try await client.deletePost(postID: postID)
+
+		let request = try #require(await recorder.onlyRequest())
+		#expect(request.httpMethod == "DELETE")
+		#expect(request.url?.path == "/functions/v1/posts/abcdef00-0000-4000-8000-000000000001")
+		#expect(request.url?.query == nil)
+		#expect(request.httpBody == nil)
+		#expect(request.value(forHTTPHeaderField: "X-Chirpy-API-Key") == "test-key")
+	}
+
+	@Test func testDeletePostRequiresAuthenticationBeforeSending() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: AuthenticatedHTTPClient(
+				apiKey: nil,
+				transport: HTTPClientStub(
+					data: Data(),
+					response: try httpResponse(url: baseURL, statusCode: 204),
+					recorder: recorder
+				)
+			)
+		)
+		let error = try await #require(throws: URLError.self) {
+			try await client.deletePost(postID: UUID())
+		}
+		#expect(error.code == .userAuthenticationRequired)
+		#expect(await recorder.count == 0)
+	}
+
+	@Test(arguments: [
+		(400, "invalid_request"),
+		(401, "unauthorized"),
+		(404, "post_not_found"),
+		(405, "method_not_allowed"),
+		(500, "internal_error")
+	])
+	func testDeletePostPreservesAPIErrors(statusCode: Int, code: String) async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let requestID = UUID()
+		let data = try JSONSerialization.data(withJSONObject: [
+			"error": ["code": code, "message": "Deletion failed.", "requestID": requestID.uuidString]
+		])
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(data: data, response: try httpResponse(url: baseURL, statusCode: statusCode))
+		)
+		let error = try await #require(throws: APIError.self) {
+			try await client.deletePost(postID: UUID())
+		}
+		#expect(error == APIError(code: code, message: "Deletion failed.", requestID: requestID))
+	}
+
+	@Test(arguments: [200, 201, 202])
+	func testDeletePostRejectsUnexpectedSuccessStatus(statusCode: Int) async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(data: Data(), response: try httpResponse(url: baseURL, statusCode: statusCode))
+		)
+		let error = try await #require(throws: URLError.self) {
+			try await client.deletePost(postID: UUID())
+		}
+		#expect(error.code == .badServerResponse)
+	}
+
+	@Test func testDeletePostRejectsNonHTTPResponse() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let response = URLResponse(url: baseURL, mimeType: nil, expectedContentLength: 0, textEncodingName: nil)
+		let client = ChirpyClient(baseURL: baseURL, httpClient: HTTPClientStub(data: Data(), response: response))
+		let error = try await #require(throws: URLError.self) {
+			try await client.deletePost(postID: UUID())
+		}
+		#expect(error.code == .badServerResponse)
+	}
+
+	@Test func testDeletePostPropagatesTransportFailure() async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: Data(),
+				response: try httpResponse(url: baseURL, statusCode: 204),
+				onSend: { throw URLError(.notConnectedToInternet) }
+			)
+		)
+		let error = try await #require(throws: URLError.self) {
+			try await client.deletePost(postID: UUID())
+		}
+		#expect(error.code == .notConnectedToInternet)
+	}
+
+	@Test(arguments: [false, true])
+	func testDeletePostHonorsCancellation(afterSending: Bool) async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: Data(),
+				response: try httpResponse(url: baseURL, statusCode: 204),
+				recorder: recorder,
+				onSend: {
+					if afterSending { withUnsafeCurrentTask { $0?.cancel() } }
+				}
+			)
+		)
+		let task = Task {
+			if !afterSending { withUnsafeCurrentTask { $0?.cancel() } }
+			try await client.deletePost(postID: UUID())
+		}
+		await #expect(throws: CancellationError.self) { try await task.value }
+		#expect(await recorder.count == (afterSending ? 1 : 0))
+	}
+
+	@Test(arguments: [false, true], [false, true])
+	func testCreateAndLikeRequestsHonorCancellation(createPost: Bool, afterSending: Bool) async throws {
+		let baseURL = try #require(URL(string: "https://example.com"))
+		let recorder = RequestRecorder()
+		let client = ChirpyClient(
+			baseURL: baseURL,
+			httpClient: HTTPClientStub(
+				data: Data(),
+				response: try httpResponse(url: baseURL, statusCode: createPost ? 201 : 200),
+				recorder: recorder,
+				onSend: {
+					if afterSending { withUnsafeCurrentTask { $0?.cancel() } }
+				}
+			)
+		)
+		let task = Task {
+			if !afterSending { withUnsafeCurrentTask { $0?.cancel() } }
+			if createPost {
+				_ = try await client.createPost(text: "Hello")
+			} else {
+				_ = try await client.setLike(postID: UUID(), isLiked: true)
+			}
+		}
+		await #expect(throws: CancellationError.self) { try await task.value }
+		#expect(await recorder.count == (afterSending ? 1 : 0))
+	}
+
 	@Test func testSetLike() async throws {
 		let data = try fixtureData(named: "post-like-update")
 		let baseURL = try #require(URL(string: "https://example.com"))
@@ -161,7 +323,7 @@ struct ChirpyClientTests {
 			)
 		)
 		let postID = try #require(
-			UUID(uuidString: "10000000-0000-4000-8000-000000000001")
+			UUID(uuidString: "ABCDEF00-0000-4000-8000-000000000001")
 		)
 
 		_ = try await client.setLike(postID: postID, isLiked: isLiked)
@@ -171,7 +333,7 @@ struct ChirpyClientTests {
 		#expect(request.httpMethod == (isLiked ? "POST" : "DELETE"))
 		#expect(
 			request.url?.path
-				== "/functions/v1/posts/\(postID)/like"
+				== "/functions/v1/posts/\(postID.uuidString.lowercased())/like"
 		)
 	}
 
@@ -381,7 +543,7 @@ struct ChirpyClientTests {
 	}
 
 	@Test(arguments: [false, true])
-	func testFetchCurrentProfileDecodesAuthorAndAuthenticates(hasAvatar: Bool) async throws {
+	func testFetchCurrentProfileDecodesProfileAndAuthenticates(hasAvatar: Bool) async throws {
 		let baseURL = try #require(URL(string: "https://example.com"))
 		let profileID = try #require(UUID(uuidString: "00000000-0000-4000-8000-000000000001"))
 		let avatarURL = hasAvatar ? "https://example.com/avatar.jpg" : nil

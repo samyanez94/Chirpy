@@ -171,6 +171,8 @@ struct ProfileViewModelTests {
 }
 
 private actor ProfileClientStub: ChirpyServicing {
+	func deletePost(postID: UUID) async throws { throw URLError(.unsupportedURL) }
+
 	enum Call: Equatable, Sendable {
 		case profile
 		case posts(UUID?, String?, Int)

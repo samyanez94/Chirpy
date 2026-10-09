@@ -133,6 +133,8 @@ struct CurrentProfileStoreTests {
 }
 
 private actor CurrentProfileClientStub: ChirpyServicing {
+	func deletePost(postID: UUID) async throws { throw URLError(.unsupportedURL) }
+
 	private(set) var calls = 0
 	private var results: [Result<Profile, Error>]?
 	private var pending: CheckedContinuation<Profile, Error>?

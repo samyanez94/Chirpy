@@ -40,6 +40,10 @@ struct PreviewChirpyClient: ChirpyServicing {
 		try result.get()
 	}
 
+	func deletePost(postID: UUID) async throws {
+		_ = try result.get()
+	}
+
 	func createPost(text: String) async throws -> Post {
 		await Post.preview
 	}

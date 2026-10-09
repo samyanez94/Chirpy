@@ -263,6 +263,8 @@ struct SearchViewModelTests {
 }
 
 private actor SearchClientSpy: ChirpyServicing {
+	func deletePost(postID: UUID) async throws { throw URLError(.unsupportedURL) }
+
 	func fetchCurrentProfile() async throws -> Profile { throw URLError(.unsupportedURL) }
 
 	struct Request: Equatable, Sendable {

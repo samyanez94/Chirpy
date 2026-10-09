@@ -305,13 +305,19 @@ private func loadedContent(
 }
 
 private actor ChirpyClientSpy: ChirpyServicing {
+
 	func fetchCurrentProfile() async throws -> Profile { throw URLError(.unsupportedURL) }
 
 	func createPost(text: String) async throws -> Post { throw URLError(.unsupportedURL) }
 
+	func deletePost(postID: UUID) async throws { throw URLError(.unsupportedURL) }
+
 	private var results: [Result<SocialFeedPage, TestError>]
+
 	private var likeResults: [Result<PostLikeUpdate, TestError>]
+
 	private var requests: [FeedRequest] = []
+
 	private var likeRequests: [FeedLikeRequest] = []
 
 	init(
