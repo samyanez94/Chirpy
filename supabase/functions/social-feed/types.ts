@@ -57,6 +57,7 @@ export interface FeedPost {
 export interface Repository {
   currentProfile(): Promise<DatabaseProfile | null>;
   createPost(text: string): Promise<DatabasePost>;
+  deletePost(postID: string): Promise<boolean>;
   feed(limitPlusOne: number, cursor: CursorPayload | null, profileID: string | null): Promise<DatabasePost[]>;
   search(query: string, limitPlusOne: number, cursor: SearchCursorPayload | null): Promise<DatabasePost[]>;
   setLike(postID: string, liked: boolean): Promise<{ postExists: boolean; isLiked: boolean; likeCount: number }>;

@@ -98,3 +98,35 @@ the existing `internal_error` envelope. Apply `20261008020000_current_profile_re
 endpoint; it grants the service role read access to the four returned profile fields. Direct anonymous and
 authenticated access remains disabled. The permission checks live in `supabase/tests/current_profile_read.sql`.
 Deploy the new `profile` Edge Function and the updated `social-feed` function to expose both route prefixes.
+
+## Post Deletion API
+
+`DELETE /functions/v1/posts/<postID>` permanently deletes a post authored by the server's `DEMO_USER_ID`.
+The same route is available at `/functions/v1/social-feed/posts/<postID>`. Send the existing
+`X-Chirpy-API-Key` header; no request body is needed. The server determines the acting profile, and clients
+cannot select a different author. Chirpy currently uses one shared demo identity, so anyone with the API key
+acts as that profile.
+
+Successful deletion returns HTTP 204 with an empty body. All likes on the deleted post are removed by the
+database, and subsequent feed, profile feed, and search requests exclude it. Deleting a post does not remove
+any Storage image object. Posting limits count surviving posts, so deleting a recent post frees a quota slot.
+
+| Condition | Status | Error code |
+| --- | --- | --- |
+| Post deleted | 204 | — |
+| Post missing, already deleted, or authored by another profile | 404 | `post_not_found` |
+| Malformed post UUID | 400 | `invalid_request` |
+| Missing or invalid API key | 401 | `unauthorized` |
+| Unsupported method | 405 | `method_not_allowed` |
+| Database failure | 500 | `internal_error` |
+
+Errors use the existing `{ "error": { "code", "message", "requestID" } }` envelope. Ownership is enforced
+atomically in the `delete_post` database function, which is executable only by `service_role`. Anonymous and
+authenticated roles retain no direct table access.
+
+Apply `supabase/migrations/20261009000000_delete_post.sql` before deploying the updated `posts` and
+`social-feed` Edge Functions. Run `deno task test` and `deno task check` for backend checks. The transactional
+database assertions in `supabase/tests/delete_post.sql` cover ownership, repeat deletion, cascading likes,
+feed/search visibility, restored posting quota, and permissions; run them against a migrated local database
+(for example, `psql <local-database-url> -v ON_ERROR_STOP=1 -f supabase/tests/delete_post.sql`). They roll back
+their fixtures. This adds the backend API; the iOS deletion controls will follow separately.

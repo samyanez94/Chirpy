@@ -162,6 +162,19 @@ export function createHandler(repository: Repository, environment: Environment) 
         return response(mapPost(await repository.createPost(text)), 201, headers);
       }
 
+      const deleteMatch = path.match(/^\/posts\/([^/]+)$/);
+      if (deleteMatch) {
+        if (request.method !== "DELETE") {
+          return error(405, "method_not_allowed", "This method is not allowed for the requested route.");
+        }
+        const postID = deleteMatch[1];
+        if (!isUUID(postID)) return error(400, "invalid_request", "Post ID must be a UUID.");
+        if (!await repository.deletePost(postID.toLowerCase())) {
+          return error(404, "post_not_found", "The requested post does not exist or cannot be deleted.");
+        }
+        return new Response(null, { status: 204, headers });
+      }
+
       const match = path.match(/^\/posts\/([^/]+)\/like$/);
       if (match) {
         if (request.method !== "POST" && request.method !== "DELETE") {

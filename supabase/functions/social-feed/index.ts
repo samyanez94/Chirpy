@@ -31,6 +31,15 @@ const repository: Repository = {
     if (!row) throw new Error("create_post returned no result");
     return row as DatabasePost;
   },
+  async deletePost(postID: string): Promise<boolean> {
+    const { data, error } = await client.rpc("delete_post", {
+      p_demo_user_id: demoUserID,
+      p_post_id: postID,
+    });
+    if (error) throw new Error(`delete_post failed: ${error.code}`);
+    if (typeof data !== "boolean") throw new Error("delete_post returned an invalid result");
+    return data;
+  },
   async feed(limitPlusOne: number, cursor: CursorPayload | null, profileID: string | null): Promise<DatabasePost[]> {
     const { data, error } = await client.rpc("feed_page", {
       p_demo_user_id: demoUserID,

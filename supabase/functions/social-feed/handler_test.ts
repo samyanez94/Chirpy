@@ -55,6 +55,13 @@ class MemoryRepository implements Repository {
     this.posts.sort(compareRows);
     return Promise.resolve(post);
   }
+  deletePost(postID: string): Promise<boolean> {
+    const index = this.posts.findIndex((post) => post.id === postID && post.author_id === rows[0].author_id);
+    if (index < 0) return Promise.resolve(false);
+    this.posts.splice(index, 1);
+    this.likes.delete(postID);
+    return Promise.resolve(true);
+  }
   feed(limit: number, cursor: CursorPayload | null, profileID: string | null = null): Promise<DatabasePost[]> {
     const filtered = this.posts.filter((post) => profileID === null || post.author_id === profileID);
     const eligible = cursor
@@ -198,6 +205,86 @@ Deno.test("health, routing, and methods return documented responses", async () =
 function compareRows(a: DatabasePost, b: DatabasePost): number {
   return b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id);
 }
+
+Deno.test("deletion removes own posts through both route prefixes and returns an empty 204", async () => {
+  for (const prefix of ["/functions/v1", "/functions/v1/social-feed"]) {
+    const repository = new MemoryRepository();
+    repository.likes.add(rows[0].id);
+    const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+    const result = await handler(
+      new Request(`http://localhost${prefix}/posts/${rows[0].id}`, {
+        method: "DELETE",
+        headers: { "x-chirpy-api-key": "test-key", "x-request-id": "delete-test" },
+      }),
+    );
+    equal(result.status, 204);
+    equal(await result.text(), "");
+    equal(result.headers.get("x-request-id"), "delete-test");
+    assert(!repository.likes.has(rows[0].id));
+    for (const path of ["/feed", `/feed?profile_id=${rows[0].author_id}`, "/search?q=Post"]) {
+      const page = await body(await handler(request(path)));
+      assert(!page.posts.some((post: { id: string }) => post.id === rows[0].id));
+    }
+    const repeated = await handler(request(`/posts/${rows[0].id}`, "DELETE"));
+    equal(repeated.status, 404);
+    equal((await body(repeated)).error.code, "post_not_found");
+  }
+});
+
+Deno.test("deletion returns the same 404 for missing and other authors' posts", async () => {
+  const repository = new MemoryRepository([{ ...rows[0], author_id: "00000000-0000-4000-8000-000000000002" }]);
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  for (const id of [rows[0].id, "ffffffff-ffff-4fff-8fff-ffffffffffff"]) {
+    const result = await handler(request(`/posts/${id}`, "DELETE"));
+    equal(result.status, 404);
+    equal((await body(result)).error.code, "post_not_found");
+  }
+  equal(repository.posts.length, 1);
+});
+
+Deno.test("deletion authenticates and validates requests before calling the repository", async () => {
+  const repository = new MemoryRepository();
+  let calls = 0;
+  repository.deletePost = () => {
+    calls++;
+    return Promise.resolve(true);
+  };
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  for (const key of [null, "wrong-key"]) {
+    const result = await handler(
+      new Request(`http://localhost/functions/v1/posts/${rows[0].id}`, {
+        method: "DELETE",
+        headers: key ? { "x-chirpy-api-key": key } : {},
+      }),
+    );
+    equal(result.status, 401);
+    equal((await body(result)).error.code, "unauthorized");
+  }
+  const malformed = await handler(request("/posts/not-a-uuid", "DELETE"));
+  equal(malformed.status, 400);
+  equal((await body(malformed)).error.code, "invalid_request");
+  for (const method of ["GET", "POST", "PUT", "PATCH", "HEAD"]) {
+    const result = await handler(request(`/posts/${rows[0].id}`, method));
+    equal(result.status, 405);
+    equal((await body(result)).error.code, "method_not_allowed");
+  }
+  equal(calls, 0);
+});
+
+Deno.test("deletion normalizes UUID casing and reports database failures", async () => {
+  const repository = new MemoryRepository();
+  const handler = createHandler(repository, { apiKey: "test-key", enableDevScenarios: false });
+  const postID = "abcdefab-cdef-4abc-8def-abcdefabcdef";
+  repository.deletePost = (id) => {
+    equal(id, postID);
+    return Promise.resolve(true);
+  };
+  equal((await handler(request(`/posts/${postID.toUpperCase()}`, "DELETE"))).status, 204);
+  repository.deletePost = () => Promise.reject(new Error("Database unavailable"));
+  const result = await handler(request(`/posts/${postID}`, "DELETE"));
+  equal(result.status, 500);
+  equal((await body(result)).error.code, "internal_error");
+});
 
 function compareAPI(a: { createdAt: string; id: string }, b: { createdAt: string; id: string }): number {
   return b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id);
