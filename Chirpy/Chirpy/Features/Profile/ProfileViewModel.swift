@@ -30,6 +30,8 @@ final class ProfileViewModel {
 
 	@ObservationIgnored private var pendingLikePostIDs = Set<UUID>()
 
+	@ObservationIgnored private var removedPostIDs = Set<UUID>()
+
 	init(client: any ChirpyServicing, profileID: UUID) {
 		self.client = client
 		self.profileID = profileID
@@ -55,7 +57,7 @@ final class ProfileViewModel {
 				limit: Self.pageSize
 			)
 			try Task.checkCancellation()
-			postsState = .loaded(PostListContent(page: page))
+			postsState = .loaded(PostListContent(page: page, excluding: removedPostIDs))
 		} catch {
 			postsState = isCancellation(error) ? .idle : .error(message: "Your posts couldn’t be loaded.")
 		}
@@ -91,7 +93,7 @@ final class ProfileViewModel {
 		do {
 			let page = try await client.fetchPage(profileID: profileID, cursor: nil, limit: Self.pageSize)
 			try Task.checkCancellation()
-			postsState = .loaded(PostListContent(page: page))
+			postsState = .loaded(PostListContent(page: page, excluding: removedPostIDs))
 		} catch {
 			// A failed or cancelled refresh leaves the current posts intact.
 		}
@@ -161,6 +163,12 @@ final class ProfileViewModel {
 		}
 	}
 
+	/// Removes a deleted post locally and excludes it from older in-flight responses.
+	func removePost(postID: UUID) {
+		removedPostIDs.insert(postID)
+		updateContent { $0.remove(postID: postID) }
+	}
+
 	private func updateContent(expectedCursor: String? = nil, _ update: (inout PostListContent) -> Void) {
 		guard case .loaded(var content) = postsState else {
 			return
@@ -171,6 +179,7 @@ final class ProfileViewModel {
 			return
 		}
 		update(&content)
+		content.posts.removeAll { removedPostIDs.contains($0.id) }
 		postsState = .loaded(content)
 	}
 

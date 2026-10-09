@@ -12,11 +12,14 @@ struct ProfileContentView: View {
 
 	let profile: Profile
 
+	private let client: any ChirpyServicing
+
 	@Environment(CurrentProfileStore.self) private var currentProfile
 
 	@State private var viewModel: ProfileViewModel
 
 	init(profile: Profile, client: any ChirpyServicing) {
+		self.client = client
 		self.profile = profile
 		_viewModel = State(
 			initialValue: ProfileViewModel(
@@ -52,11 +55,14 @@ struct ProfileContentView: View {
 		.task {
 			await viewModel.load()
 		}
+		.task(id: emptyPageCursor) {
+			if emptyPageCursor != nil { await viewModel.loadNextPage() }
+		}
 		.navigationDestination(for: UUID.self) { postID in
 			if case .loaded(let content) = viewModel.postsState,
 				let post = content.posts.first(where: { $0.id == postID })
 			{
-				PostDetailView(post: post) {
+				PostDetailView(post: post, client: client, onDeleted: viewModel.removePost) {
 					Task { await viewModel.toggleLike(postID: postID) }
 				}
 			} else {
@@ -69,6 +75,13 @@ struct ProfileContentView: View {
 				.navigationBarTitleDisplayMode(.inline)
 			}
 		}
+	}
+
+	private var emptyPageCursor: String? {
+		guard case .loaded(let content) = viewModel.postsState else {
+			return nil
+		}
+		return content.emptyPageCursor
 	}
 
 	@ViewBuilder
@@ -86,7 +99,7 @@ struct ProfileContentView: View {
 				retryButton
 			}
 		case .loaded(let content):
-			if content.posts.isEmpty {
+			if content.posts.isEmpty && content.nextCursor == nil {
 				ContentUnavailableView(
 					"No posts yet",
 					systemImage: "text.bubble",

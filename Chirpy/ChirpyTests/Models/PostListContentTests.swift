@@ -56,6 +56,26 @@ struct PostListContentTests {
 		#expect(content == unchanged)
 	}
 
+	@Test func removalPreservesPaginationAndMissingIDsAreHarmless() {
+		var content = PostListContent(posts: [.preview], nextCursor: "next", isLoadingNextPage: true, paginationError: "Failed")
+		content.remove(postID: UUID())
+		#expect(content.posts == [.preview])
+		content.remove(postID: Post.preview.id)
+		#expect(content.posts.isEmpty)
+		#expect(content.nextCursor == "next")
+		#expect(content.isLoadingNextPage)
+		#expect(content.paginationError == "Failed")
+	}
+
+	@Test func emptyPagesContinueLoadingUnlessPaginationFailed() {
+		var content = PostListContent(posts: [.preview], nextCursor: "next")
+		#expect(content.emptyPageCursor == nil)
+		content.remove(postID: Post.preview.id)
+		#expect(content.emptyPageCursor == "next")
+		content.paginationError = "Failed"
+		#expect(content.emptyPageCursor == nil)
+	}
+
 	@Test(arguments: [0, 1, 4, 5, 6, 10])
 	func paginationThresholdUsesTheLastFivePosts(count: Int) {
 		let posts = (0..<count)

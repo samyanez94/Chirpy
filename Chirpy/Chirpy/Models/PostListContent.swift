@@ -9,10 +9,19 @@ import Foundation
 
 /// Loaded posts and pagination state shared by the feed and search.
 nonisolated struct PostListContent: Equatable, Sendable {
+
 	var posts: [Post]
+
 	var nextCursor: String?
+
 	var isLoadingNextPage = false
+
 	var paginationError: String?
+
+	/// Continues pagination when local removal leaves no visible rows to trigger loading.
+	var emptyPageCursor: String? {
+		posts.isEmpty && paginationError == nil ? nextCursor : nil
+	}
 
 	/// Appends unique posts and advances pagination using the server's cursor.
 	mutating func append(_ page: SocialFeedPage) {
@@ -32,6 +41,11 @@ nonisolated struct PostListContent: Equatable, Sendable {
 		posts[index].likeCount = update.likeCount
 	}
 
+	/// Removes a post without changing pagination state.
+	mutating func remove(postID: UUID) {
+		posts.removeAll { $0.id == postID }
+	}
+
 	/// Returns whether a loaded post is among the last five posts.
 	func isNearEnd(postID: UUID) -> Bool {
 		guard let index = posts.firstIndex(where: { $0.id == postID }) else {
@@ -42,8 +56,11 @@ nonisolated struct PostListContent: Equatable, Sendable {
 }
 
 extension PostListContent {
-	init(page: SocialFeedPage) {
+	init(page: SocialFeedPage, excluding postIDs: Set<UUID> = []) {
 		self.init(posts: [], nextCursor: nil)
 		append(page)
+		posts.removeAll {
+			postIDs.contains($0.id)
+		}
 	}
 }

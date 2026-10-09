@@ -31,6 +31,9 @@ final class FeedViewModel {
 	@ObservationIgnored
 	private var isFetchingFirstPage = false
 
+	@ObservationIgnored
+	private var removedPostIDs = Set<UUID>()
+
 	init(client: any ChirpyServicing) {
 		self.client = client
 	}
@@ -172,6 +175,14 @@ final class FeedViewModel {
 		}
 	}
 
+	/// Removes a deleted post locally and excludes it from older in-flight responses.
+	func removePost(postID: UUID) {
+		removedPostIDs.insert(postID)
+		updateContent {
+			$0.remove(postID: postID)
+		}
+	}
+
 	private func updateContent(
 		expectedCursor: String? = nil,
 		_ update: (inout PostListContent) -> Void
@@ -187,6 +198,7 @@ final class FeedViewModel {
 		}
 
 		update(&content)
+		content.posts.removeAll { removedPostIDs.contains($0.id) }
 		state = .loaded(content: content)
 	}
 
@@ -194,6 +206,6 @@ final class FeedViewModel {
 	private func fetchFirstPage() async throws {
 		let page = try await client.fetchPage(cursor: nil, limit: Self.pageSize)
 		try Task.checkCancellation()
-		state = .loaded(content: PostListContent(page: page))
+		state = .loaded(content: PostListContent(page: page, excluding: removedPostIDs))
 	}
 }

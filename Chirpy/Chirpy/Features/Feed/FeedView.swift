@@ -39,6 +39,11 @@ struct FeedView: View {
 						}
 					}
 				}
+				.task(id: page.emptyPageCursor) {
+					if page.emptyPageCursor != nil {
+						await viewModel.loadNextPage()
+					}
+				}
 				.listStyle(.plain)
 				.refreshable {
 					await viewModel.refresh()
@@ -78,7 +83,11 @@ struct FeedView: View {
 			if case .loaded(let content) = viewModel.state,
 				let post = content.posts.first(where: { $0.id == postID })
 			{
-				PostDetailView(post: post) {
+				PostDetailView(
+					post: post,
+					client: client,
+					onDeleted: viewModel.removePost
+				) {
 					Task {
 						await viewModel.toggleLike(postID: postID)
 					}

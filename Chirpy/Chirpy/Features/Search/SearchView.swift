@@ -31,7 +31,7 @@ struct SearchView: View {
 			case .loading:
 				ProgressView("Searching…")
 			case .loaded(let content):
-				if content.posts.isEmpty {
+				if content.posts.isEmpty && content.nextCursor == nil && content.paginationError == nil {
 					ContentUnavailableView.search(text: viewModel.query)
 				} else {
 					results(content)
@@ -63,7 +63,7 @@ struct SearchView: View {
 			if case .loaded(let content) = viewModel.state,
 				let post = content.posts.first(where: { $0.id == postID })
 			{
-				PostDetailView(post: post) {
+				PostDetailView(post: post, client: client, onDeleted: viewModel.removePost) {
 					Task { await viewModel.toggleLike(postID: postID) }
 				}
 			} else {
@@ -126,6 +126,9 @@ struct SearchView: View {
 				ProgressView("Loading more results…")
 					.frame(maxWidth: .infinity)
 			}
+		}
+		.task(id: content.emptyPageCursor) {
+			if content.emptyPageCursor != nil { await viewModel.loadNextPage() }
 		}
 		.listStyle(.plain)
 		.scrollDismissesKeyboard(.interactively)
