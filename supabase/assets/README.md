@@ -57,8 +57,6 @@ creates both artwork buckets and uploads all avatars and feed illustrations befo
 Use a new versioned filename for replacements to avoid stale one-year caches.
 Identical published files are skipped; differing content at an existing path stops publishing so it can be versioned.
 
-![Eight feed illustrations](../../docs/Images/bird-posts.jpg)
-
 | Scene | Matching post |
 | --- | --- |
 | Crow and bottle cap | Found a bottle cap. Won’t be taking questions about my net worth. |

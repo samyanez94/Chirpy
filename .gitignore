@@ -72,4 +72,4 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 
 # Personal API key (bundled only into local app builds)
-Chirpy/Chirpy/LocalConfiguration.plist
+Chirpy/LocalConfiguration.plist

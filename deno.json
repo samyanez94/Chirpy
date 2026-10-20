@@ -9,7 +9,7 @@
     "strict": true
   },
   "fmt": {
-    "exclude": ["Chirpy/"],
+    "exclude": ["Chirpy/", "ChirpyTests/", "Configuration/"],
     "lineWidth": 120,
     "semiColons": true
   },

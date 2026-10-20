@@ -34,9 +34,9 @@ The project targets iOS 26.5 or later. This repository includes the iOS app and 
 ## Running the Project
 
 1. Clone the repository.
-2. Copy `Chirpy/Configuration/LocalConfiguration.example.plist` to `Chirpy/Chirpy/LocalConfiguration.plist`.
+2. Copy `Configuration/LocalConfiguration.example.plist` to `Chirpy/LocalConfiguration.plist`.
 3. Set `ChirpyAPIKey` in the copied file to the personal API key configured on the backend.
-4. Open `Chirpy/Chirpy.xcodeproj` in a compatible Xcode version and select the `Chirpy` scheme.
+4. Open `Chirpy.xcodeproj` in a compatible Xcode version and select the `Chirpy` scheme.
 5. Choose an iPhone Simulator or configure signing for your device, then build and run.
 
 The app connects to the hosted Supabase project by default. You need its configured API key, or you can run your own
