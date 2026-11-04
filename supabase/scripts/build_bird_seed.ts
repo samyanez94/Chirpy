@@ -1,5 +1,5 @@
 // Regenerate both a fresh demo seed and a targeted update for an existing demo.
-// Run from the repository root: deno run --allow-read --allow-write supabase/scripts/build_bird_seed.ts
+// Run from supabase/: deno task demo:build
 interface Bird {
   species: string;
   displayName: string;
@@ -14,8 +14,10 @@ interface PostImage {
   prompt: string;
 }
 
-const birds: Bird[] = JSON.parse(await Deno.readTextFile("supabase/demo/birds.json"));
-const postImages: PostImage[] = JSON.parse(await Deno.readTextFile("supabase/assets/post-prompts.json"));
+const backendFile = (path: string) => new URL(`../${path}`, import.meta.url);
+
+const birds: Bird[] = JSON.parse(await Deno.readTextFile(backendFile("demo/birds.json")));
+const postImages: PostImage[] = JSON.parse(await Deno.readTextFile(backendFile("assets/post-prompts.json")));
 const imageFiles = new Map<string, string>();
 const uniqueFiles = new Set<string>();
 for (const image of postImages) {
@@ -27,7 +29,7 @@ for (const image of postImages) {
   ) {
     throw new Error(`Invalid or duplicate post image: ${key}`);
   }
-  const asset = await Deno.stat(`supabase/assets/posts/${image.file}`);
+  const asset = await Deno.stat(backendFile(`assets/posts/${image.file}`));
   if (!asset.isFile || asset.size === 0 || asset.size > 1048576) {
     throw new Error(`Post image is empty or exceeds bucket limit: ${image.file}`);
   }
@@ -47,7 +49,7 @@ for (const bird of birds) {
   if (!/^[a-z]+$/.test(bird.species) || bird.posts.length !== 8 || bird.username.length > 30) {
     throw new Error(`Invalid bird profile: ${bird.species}`);
   }
-  const avatar = await Deno.stat(`supabase/assets/avatars/${bird.species}-v1.jpg`);
+  const avatar = await Deno.stat(backendFile(`assets/avatars/${bird.species}-v1.jpg`));
   if (avatar.size > 262144) throw new Error(`Avatar exceeds bucket limit: ${bird.species}`);
   for (const text of bird.posts) {
     if (text !== text.trim() || Array.from(text).length < 1 || Array.from(text).length > 300 || allPosts.has(text)) {
@@ -122,11 +124,11 @@ where p.id = demo.id::uuid;
 commit;
 `;
 
-for (const [path, content] of [["supabase/seed.sql", seed], ["supabase/demo/refresh-bird-demo.sql", update]]) {
+for (const [path, content] of [["seed.sql", seed], ["demo/refresh-bird-demo.sql", update]]) {
   if (Deno.args.includes("--check")) {
-    if (await Deno.readTextFile(path) !== content) throw new Error(`Regenerate ${path}`);
+    if (await Deno.readTextFile(backendFile(path)) !== content) throw new Error(`Regenerate ${path}`);
   } else {
-    await Deno.writeTextFile(path, content);
+    await Deno.writeTextFile(backendFile(path), content);
   }
 }
 console.log(

@@ -4,7 +4,7 @@ set -eu
 # Run from the repository root after resuming the hosted Chirpy project.
 # Use the authenticated CLI; never put service-role keys in the app or this script.
 chirpy_project_ref=ncmomgqxdwrjwmoihayz
-deno task demo:check
+deno task --config supabase/deno.json demo:check
 chirpy_download=$(mktemp)
 trap 'rm -f "$chirpy_download"' EXIT HUP INT TERM
 

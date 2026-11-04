@@ -68,12 +68,14 @@ Identical published files are skipped; differing content at an existing path sto
 | Penguin pebble | Found the perfect pebble for the nest. Yes, I checked the other 400 pebbles. |
 | Peacock display | Displayed for a peahen. She continued eating. Tough room. |
 
-After editing either manifest, run `deno task demo:build`, then `deno task demo:check` before publishing.
+After editing either manifest, run `deno task demo:build`, then `deno task demo:check` from `supabase/` before
+publishing. Return to the repository root to run the publishing script.
 
 ## Local development
 
-Apply the bucket migration with `supabase migration up --local`. A fresh `supabase db reset` also applies migrations and
-loads the bird seed, but removes existing local data. To retain it, apply the targeted refresh through
+Run Supabase CLI commands from the repository root. Apply the bucket migration with `supabase migration up --local`.
+A fresh `supabase db reset` also applies migrations and loads the bird seed, but removes existing local data.
+To retain it, apply the targeted refresh through
 `supabase db query --local --file supabase/demo/refresh-bird-demo.sql`.
 
 The seed uses the hosted public avatar URLs even when the feed backend runs locally. Preview avatar URLs follow

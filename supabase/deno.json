@@ -1,0 +1,18 @@
+{
+  "tasks": {
+    "test": "deno test functions/social-feed",
+    "demo:build": "deno run --allow-read --allow-write scripts/build_bird_seed.ts",
+    "demo:check": "deno run --allow-read scripts/build_bird_seed.ts --check",
+    "check": "deno check functions/profile/index.ts functions/posts/index.ts functions/feed/index.ts functions/search/index.ts functions/social-feed/index.ts functions/social-feed/handler_test.ts scripts/build_bird_seed.ts"
+  },
+  "compilerOptions": {
+    "strict": true
+  },
+  "fmt": {
+    "lineWidth": 120,
+    "semiColons": true
+  },
+  "lint": {
+    "rules": { "tags": ["recommended"] }
+  }
+}
