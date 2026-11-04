@@ -100,9 +100,9 @@ and does not deploy the backend or publish apps.
 
 | Required check | Validation | Local equivalent |
 | --- | --- | --- |
-| Supabase quality | Type checks, lint, unit tests, demo data, fresh migrations/seed, SQL integration tests | In `supabase/`: `deno task verify`, then `deno task test:db` against a running local stack |
-| iOS quality | Swift formatting, simulator tests, Release compilation | Commands below |
-| Android quality | Formatting, detekt, lint, JVM tests, debug and optimized Release APKs | In `android/`: `./gradlew fullValidation` |
+| Supabase validation | Type checks, lint, unit tests, demo data, fresh migrations/seed, SQL integration tests | In `supabase/`: `deno task verify`, then `deno task test:db` against a running local stack |
+| iOS validation | Swift formatting, simulator tests, Release compilation | Commands below |
+| Android validation | Formatting, detekt, lint, JVM tests, debug and optimized Release APKs | In `android/`: `./gradlew fullValidation` |
 | Android UI tests | Compose tests on an API 35 emulator | In `android/`: `./gradlew connectedDebugAndroidTest` |
 
 For iOS, from the repository root:

@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Supabase quality
+  validation:
+    name: Supabase validation
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
