@@ -13,8 +13,8 @@ enum AppConfiguration {
 			let data = try? Data(contentsOf: url),
 			let values = try? PropertyListDecoder().decode([String: String].self, from: data)
 		else {
-            return nil
-        }
+			return nil
+		}
 		return values["ChirpyAPIKey"]
 	}()
 

@@ -141,11 +141,13 @@ nonisolated struct ChirpyClient: ChirpyServicing {
 
 	/// Encodes query values consistently for the backend's URLSearchParams parser.
 	private func makeURL(path: String, queryItems: [URLQueryItem?]) throws -> URL {
-		guard var components = URLComponents(
-            url: baseURL.appending(path: "functions/v1/\(path)"),
-            resolvingAgainstBaseURL: false
-        ) else {
-            throw URLError(.badURL)
+		guard
+			var components = URLComponents(
+				url: baseURL.appending(path: "functions/v1/\(path)"),
+				resolvingAgainstBaseURL: false
+			)
+		else {
+			throw URLError(.badURL)
 		}
 		components.queryItems = queryItems.compactMap(\.self)
 		// An unescaped plus is interpreted as a space by URLSearchParams.

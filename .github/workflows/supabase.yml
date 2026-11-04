@@ -1,0 +1,55 @@
+name: Supabase
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Supabase quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2
+        with:
+          deno-version: "2.9.5"
+      - name: Set Deno cache directory
+        run: echo "DENO_DIR=${RUNNER_TEMP}/deno-cache" >> "$GITHUB_ENV"
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ runner.temp }}/deno-cache
+          key: deno-${{ runner.os }}-2.9.5-${{ hashFiles('supabase/deno.lock') }}
+      - name: Check types, lint, unit tests, and demo data
+        working-directory: supabase
+        run: |
+          deno task --frozen verify
+          git diff --exit-code -- deno.lock
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1
+        with:
+          version: "2.115.0"
+      - name: Apply migrations and seed to a fresh local database
+        run: supabase db start
+      - name: Run SQL integration tests
+        working-directory: supabase
+        run: deno task test:db
+      - name: Collect database logs
+        if: failure()
+        run: docker logs supabase_db_chirpy > "${RUNNER_TEMP}/supabase-db.log" 2>&1
+      - name: Upload database diagnostics
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: supabase-diagnostics
+          path: ${{ runner.temp }}/supabase-db.log
+          retention-days: 7
+          if-no-files-found: ignore

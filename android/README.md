@@ -31,7 +31,7 @@ From this directory:
 ```
 
 `qualityCheck` (`verify` is an alias) requires no API key, server, or emulator. Network tests use MockWebServer; UI tests use fixed state.
-GitHub Actions runs qualityCheck and preserves the separate emulator test job.
+GitHub Actions runs fullValidation and a separate API 35 emulator test job.
 Use an API 35 emulator for UI tests, matching CI. The pinned stable Espresso dependency currently fails
 to initialize input injection on API 37; this does not prevent running the app on Android 17.
 Build output: `app/build/outputs/apk/debug/app-debug.apk`.
@@ -100,10 +100,10 @@ References: [detekt compatibility](https://detekt.dev/docs/1.23.8/introduction/c
 
 After pushing the workflow and allowing its first run, open **Settings → Rules → Rulesets** (or
 **Branches → Branch protection rules**) for `main`. Require pull requests and status checks, and
-select **Android quality** from the GitHub Actions checks. Optionally require `ui-tests` as well.
+select **Android quality** from the GitHub Actions checks. Also require **Android UI tests**, **iOS quality**, and **Supabase quality**.
 The workflow runs on every pull request and push to main, so path filtering cannot leave a required
 check pending for iOS-only changes. Repository administrators must enable this rule; committing the
-workflow alone does not prevent merging. Remote CI has not been run as part of local setup.
+workflow alone does not prevent merging. See the repository README for the cross-platform CI commands and reports.
 
 ## Review checklist
 

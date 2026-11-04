@@ -1,0 +1,48 @@
+name: iOS
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: iOS quality
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check Swift formatting
+        run: xcrun swift-format lint --strict --recursive ios/Chirpy ios/ChirpyTests
+      # Missing local configuration is supported and prevents authenticated network requests.
+      - name: Build and test on iPhone simulator
+        run: |
+          xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
+            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+            -derivedDataPath "${RUNNER_TEMP}/ChirpyDerivedData" \
+            -resultBundlePath "${RUNNER_TEMP}/ChirpyTests.xcresult" \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Compile Release
+        run: |
+          xcodebuild build -project ios/Chirpy.xcodeproj -scheme Chirpy \
+            -configuration Release -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "${RUNNER_TEMP}/ChirpyDerivedData" \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ios-test-results
+          path: ${{ runner.temp }}/ChirpyTests.xcresult
+          retention-days: 7
+          if-no-files-found: ignore

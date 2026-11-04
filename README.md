@@ -92,6 +92,41 @@ From the repository root, you can also select the configuration explicitly, for 
 Continue running Supabase CLI commands and `sh supabase/scripts/publish_bird_demo.sh` from the repository root.
 The demo build task only generates local files; publishing is a separate step.
 
+## Continuous integration
+
+GitHub Actions validates all three projects on every pull request, push to `main`, and manual run.
+New pushes cancel superseded runs for the same workflow and branch. CI uses no production secrets
+and does not deploy the backend or publish apps.
+
+| Required check | Validation | Local equivalent |
+| --- | --- | --- |
+| Supabase quality | Type checks, lint, unit tests, demo data, fresh migrations/seed, SQL integration tests | In `supabase/`: `deno task verify`, then `deno task test:db` against a running local stack |
+| iOS quality | Swift formatting, simulator tests, Release compilation | Commands below |
+| Android quality | Formatting, detekt, lint, JVM tests, debug and optimized Release APKs | In `android/`: `./gradlew fullValidation` |
+| Android UI tests | Compose tests on an API 35 emulator | In `android/`: `./gradlew connectedDebugAndroidTest` |
+
+For iOS, from the repository root:
+
+```sh
+xcrun swift-format lint --strict --recursive ios/Chirpy ios/ChirpyTests
+xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
+  -destination 'platform=iOS Simulator,name=<simulator name>' CODE_SIGNING_ALLOWED=NO
+xcodebuild build -project ios/Chirpy.xcodeproj -scheme Chirpy \
+  -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
+```
+
+CI selects Xcode 26.6 with an iOS 26.5 simulator. Backend tooling is pinned to Deno 2.9.5
+and Supabase CLI 2.115.0. Android uses JDK 17 for SDK tools and analysis; Gradle automatically
+provisions JetBrains JDK 25 according to its committed daemon criteria. Action revisions are pinned.
+
+Test/analysis reports and failure diagnostics are available as workflow artifacts for seven days.
+The iOS tests use stubbed clients; CI omits the optional local API-key configuration. Backend SQL
+tests run only against the ephemeral local database. Client tests do not require a hosted backend.
+
+Require the four checks above in the `main` branch protection settings after their first successful
+runs. Workflow files alone do not enforce merge restrictions. Keep required workflows running on
+all pull requests; adding path filters can leave required checks pending.
+
 ## Documentation
 
 - [App Overview](https://github.com/samyanez94/Chirpy/wiki/App-Overview) — app behavior, the bird demo, and current
