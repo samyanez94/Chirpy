@@ -1,0 +1,21 @@
+# Android development standards
+
+- Keep code in one app module, organized by feature. Extract modules only for a demonstrated need.
+- Compose renders immutable state and forwards actions. No networking or business rules in composables.
+- ViewModels own screen state; repositories own data access. Network DTOs stay inside core/network.
+- Inject dependencies through constructors; construct production dependencies in AppContainer.
+- Expose StateFlow, keeping MutableStateFlow private. Propagate CancellationException.
+- Use descriptive names, cohesive functions, explicit state transitions, and one primary type per file.
+- Keep UI strings in resources. Support dark mode, font scaling, and accessibility semantics.
+- Comments explain intent and constraints, not syntax. Avoid speculative abstractions and pass-through use cases.
+- Follow official Kotlin coding conventions; ktlint with .editorconfig is the only formatter.
+- Follow Google’s recommended Android architecture and modern Jetpack Compose APIs within this project’s conventions.
+- Respect structured concurrency and lifecycle-aware state management.
+- Run ./gradlew format, then ./gradlew qualityCheck before declaring implementation complete.
+- qualityCheck must run ktlint, detekt, Android Lint, JVM tests, and the debug build.
+- Never suppress lint or static-analysis warnings merely to pass validation; no blanket baselines.
+- Write meaningful tests for new business logic and behavioral changes. Report checks that could not be completed.
+- Test observable behavior, including cancellation, stale responses, cursor progression, and mutation failures.
+- Run ./gradlew connectedDebugAndroidTest when an emulator is available.
+- Never commit chirpy.properties, local.properties, API keys, or build output. Never log API keys.
+- Do not add screens beyond the approved vertical slice.

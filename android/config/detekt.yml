@@ -1,0 +1,57 @@
+# Deliberate syntax-only rule set. Formatting belongs exclusively to ktlint.
+# Type-resolved rules require a detekt release compatible with Kotlin 2.4 metadata.
+build:
+  maxIssues: 0
+config:
+  validation: true
+  warningsAsErrors: true
+complexity:
+  active: true
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+    ignoreSimpleWhenEntries: true
+  LongMethod:
+    active: true
+    threshold: 100
+    ignoreAnnotated: ['Composable']
+  LongParameterList:
+    active: true
+    functionThreshold: 10
+    constructorThreshold: 10
+    ignoreDefaultParameters: true
+  NestedBlockDepth:
+    active: true
+    threshold: 4
+  TooManyFunctions:
+    active: true
+    thresholdInClasses: 20
+    thresholdInInterfaces: 20
+    thresholdInObjects: 20
+    thresholdInFiles: 20
+    excludes: ['**/test/**', '**/androidTest/**']
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+potential-bugs:
+  active: true
+  EqualsAlwaysReturnsTrueOrFalse:
+    active: true
+  ExplicitGarbageCollectionCall:
+    active: true
+  UnreachableCode:
+    active: true
+style:
+  active: true
+  ForbiddenComment:
+    active: true
+  LoopWithTooManyJumpStatements:
+    active: true
+  ThrowsCount:
+    active: true
+
+empty-blocks:
+  active: true
+  EmptyCatchBlock:
+    active: true

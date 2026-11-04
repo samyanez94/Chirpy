@@ -29,8 +29,8 @@ The Search tab supports [paginated post search](https://github.com/samyanez94/Ch
 - Supabase Postgres, Storage, and Edge Functions
 - Swift Testing and Deno tests
 
-The iOS project targets iOS 26.5 or later. This repository contains the iOS client and its backend.
-A future Android client can be added alongside `ios/` when development begins.
+The iOS project targets iOS 26.5 or later. Both clients share the backend in this repository.
+The Android client is under development; its first slice implements the Home feed.
 
 ## Repository Structure
 
@@ -42,6 +42,7 @@ Chirpy/
 │   ├── ChirpyTests/         # Tests and fixtures
 │   ├── Configuration/      # Local configuration template
 │   └── .swift-format
+├── android/                # Native Android client and Gradle build
 ├── supabase/               # Shared backend, tests, and demo data
 │   ├── deno.json           # Backend tasks and tooling
 │   └── deno.lock
@@ -68,6 +69,8 @@ To run the iOS tests from the repository root, choose an installed simulator and
 xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
   -destination 'platform=iOS Simulator,name=<simulator name>'
 ```
+
+For Android setup, architecture, and verification commands, see [the Android README](android/README.md).
 
 ## Backend Development
 

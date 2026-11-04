@@ -1,0 +1,22 @@
+<resources>
+  <string name="app_name">Chirpy</string>
+  <string name="home">Home</string>
+  <string name="loading_feed">Loading the flock…</string>
+  <string name="feed_error">The feed couldn’t be loaded.</string>
+  <string name="retry">Try again</string>
+  <string name="empty_title">It’s quiet here</string>
+  <string name="empty_message">Posts from the flock will appear here.</string>
+  <string name="refresh">Refresh feed</string>
+  <string name="refresh_error">Couldn’t refresh. Your feed is still here.</string>
+  <string name="pagination_error">More posts couldn’t be loaded.</string>
+  <string name="loading_more">Loading more posts</string>
+  <string name="like">Like post</string>
+  <string name="unlike">Unlike post</string>
+  <string name="like_error">Couldn’t update the like. Please try again.</string>
+  <plurals name="likes_count"><item quantity="one">%1$d like</item><item quantity="other">%1$d likes</item></plurals>
+  <string name="post_image">Image attached to %1$s’s post</string>
+  <string name="image_unavailable">Image unavailable</string>
+  <string name="configuration_error">Add your Chirpy API key to chirpy.properties and rebuild.</string>
+  <string name="handle">@%1$s</string>
+  <string name="just_now">Just now</string>
+</resources>
