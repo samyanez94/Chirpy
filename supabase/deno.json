@@ -1,5 +1,8 @@
 {
   "tasks": {
+    "verify": "deno task check && deno task lint && deno task test && deno task demo:check",
+    "lint": "deno lint functions scripts",
+    "test:db": "sh scripts/test_db.sh",
     "test": "deno test functions/social-feed",
     "demo:build": "deno run --allow-read --allow-write scripts/build_bird_seed.ts",
     "demo:check": "deno run --allow-read scripts/build_bird_seed.ts --check",

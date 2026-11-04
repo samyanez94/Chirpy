@@ -75,6 +75,8 @@ Run the Deno tasks from `supabase/`:
 
 ```sh
 cd supabase
+deno task verify      # Type checks, lint, unit tests, and demo validation
+deno task test:db     # SQL integration tests against the running local stack
 deno task check       # Type-check Edge Functions and the seed generator
 deno task test        # Run the social-feed tests
 deno task demo:build  # Regenerate local demo SQL files
