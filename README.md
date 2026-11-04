@@ -115,7 +115,7 @@ xcodebuild build -project ios/Chirpy.xcodeproj -scheme Chirpy \
   -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
 ```
 
-CI selects Xcode 26.6 with an iOS 26.5 simulator. Backend tooling is pinned to Deno 2.9.5
+CI selects Xcode 26.6, installs the iOS 26.5 runtime, and creates a dedicated simulator. Backend tooling is pinned to Deno 2.9.5
 and Supabase CLI 2.115.0. Android uses JDK 17 for SDK tools and analysis; Gradle automatically
 provisions JetBrains JDK 25 according to its committed daemon criteria. Action revisions are pinned.
 
