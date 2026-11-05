@@ -1,10 +1,12 @@
 package com.samuel.chirpy.feature.feed
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -57,6 +60,10 @@ fun FeedScreen(
     onLoadMore: () -> Unit,
     onLike: (String) -> Unit,
     onMessageDismissed: () -> Unit,
+    title: String = stringResource(R.string.home),
+    onPost: (com.samuel.chirpy.core.model.Post) -> Unit = {},
+    showToolbar: Boolean = true,
+    emptyMessage: String = stringResource(R.string.empty_message),
 ) {
     val formatDate = rememberRelativePostDateFormatter()
     val currentOnMessageDismissed by rememberUpdatedState(onMessageDismissed)
@@ -72,21 +79,30 @@ fun FeedScreen(
     }
     FeedPaginationEffect(state, listState, onLoadMore)
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.home)) },
-                actions = {
-                    IconButton(
-                        onClick = onRefresh,
-                        enabled = !state.isLoading && !state.isRefreshing,
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_refresh),
-                            stringResource(R.string.refresh),
-                        )
-                    }
-                },
+        contentWindowInsets = if (showToolbar) {
+            ScaffoldDefaults.contentWindowInsets
+        } else {
+            WindowInsets(
+                0,
             )
+        },
+        topBar = {
+            if (showToolbar) {
+                TopAppBar(
+                    title = { Text(title) },
+                    actions = {
+                        IconButton(
+                            onClick = onRefresh,
+                            enabled = !state.isLoading && !state.isRefreshing,
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.ic_refresh),
+                                stringResource(R.string.refresh),
+                            )
+                        }
+                    },
+                )
+            }
         },
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
@@ -121,7 +137,7 @@ fun FeedScreen(
                 state.posts.isEmpty() && state.nextCursor == null ->
                     FeedStatus(
                         stringResource(R.string.empty_title),
-                        stringResource(R.string.empty_message),
+                        emptyMessage,
                         onRefresh,
                         Modifier.fillMaxSize()
                             .padding(padding)
@@ -140,6 +156,7 @@ fun FeedScreen(
                                 post.id in state.pendingLikes,
                                 { onLike(post.id) },
                                 formatDate,
+                                Modifier.clickable { onPost(post) },
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }

@@ -1,12 +1,14 @@
 package com.samuel.chirpy.feature.feed
 
 import com.samuel.chirpy.core.data.ApiException
-import com.samuel.chirpy.core.data.FeedRepository
 import com.samuel.chirpy.core.data.MissingApiKeyException
+import com.samuel.chirpy.core.data.PostChange
+import com.samuel.chirpy.core.data.SocialRepository
 import com.samuel.chirpy.core.model.FeedPage
 import com.samuel.chirpy.core.model.LikeUpdate
 import com.samuel.chirpy.core.model.Post
 import com.samuel.chirpy.core.model.Profile
+import com.samuel.chirpy.feature.social.FakeSocialRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -222,7 +224,9 @@ class FeedViewModelTest {
         assertTrue(model.state.value.posts.single().isLiked)
     }
 
-    private class FakeRepository : FeedRepository {
+    private class FakeRepository(
+        private val social: FakeSocialRepository = FakeSocialRepository(),
+    ) : SocialRepository by social {
         var pageCalls = 0
         var likeCalls = 0
         var page: suspend (String?, Int) -> FeedPage = { _, _ ->
@@ -239,7 +243,7 @@ class FeedViewModelTest {
 
         override suspend fun setLike(postId: String, isLiked: Boolean): LikeUpdate {
             likeCalls++
-            return like(postId, isLiked)
+            return like(postId, isLiked).also { social.changes.emit(PostChange.Liked(it)) }
         }
     }
 

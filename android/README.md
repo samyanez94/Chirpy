@@ -1,8 +1,16 @@
 # Chirpy for Android
 
-The first vertical slice is Home: cursor pagination, pull-to-refresh, author portraits, post images,
-server-confirmed likes, and loading/empty/error/retry states. Search, Profile, post detail, and composition
-are intentionally deferred. Post rows do not navigate yet.
+The Android app supports the same features as iOS:
+
+- Home feed with cursor pagination, pull-to-refresh, portraits, images, and likes.
+- Debounced post search with pagination, refresh, and retry.
+- Current profile and its paginated posts, including profiles with no posts.
+- Post detail with selectable text, images, a full timestamp, and likes.
+- Text-only composition with a 300 Unicode code point limit and draft retention on failure.
+- Confirmed deletion of owned posts; deleted posts disappear from all loaded timelines.
+
+The app uses the same shared demo identity as iOS. Likes, creation, and deletion are
+server-confirmed and synchronized across loaded screens.
 
 ## Run
 
@@ -45,13 +53,21 @@ build an unsigned release APK; production signing is not configured yet.
 - `core/data`: repository contract and typed failures.
 - `core/network`: Retrofit, serialization DTOs, error mapping, and the repository implementation.
 - `core/ui`: theme and reusable post presentation.
-- `feature/feed`: ViewModel, immutable state, lifecycle-aware route, and stateless screen.
+- `feature/feed`: shared Home/Search/Profile pagination state and post-list presentation.
+- `feature/social`: tab navigation, profile header, search input, composer, and post detail.
+- `SocialRepository`: profile, search, creation, deletion, and ordered post-change events.
+- The repository owns cached current-profile state and shares active/queued mutation IDs across screens.
+  Likes and deletion serialize per post; unrelated posts can update concurrently.
+- Route composables collect ViewModel state and wire callbacks. Search, Profile, Composer, and Detail
+  render immutable state. Explicit destinations separate navigation from composer/detail operation state.
 
 The screen renders state and sends actions. The ViewModel owns pagination and per-post mutation state;
 only the repository performs network requests. Generation checks reject superseded results. Like responses
 are authoritative, and a late refresh cannot replace a like completed after that refresh started.
-Rotation preserves the ViewModel and list position; process recreation reloads Home. No persistent feed
-cache or background retry queue is introduced in this slice.
+Rotation preserves ViewModels, the draft, selected post, and tab/list state. Process recreation
+reloads server data; drafts are not persisted to disk. No persistent feed cache or background retry
+queue is introduced. Search changes cancel earlier requests and reject stale results. Deleted IDs
+are excluded from in-flight pages, and mutation versions protect likes completed during a request.
 
 ktlint **1.8.0** is the only formatter, configured through `.editorconfig` using the IntelliJ IDEA
 code style and Kotlin official IDE defaults (four spaces, 100 columns). Composable functions retain
@@ -112,4 +128,7 @@ workflow alone does not prevent merging. See the repository README for the cross
 - Retry initial and pagination errors; invalid cursors restart pagination.
 - Tap a like repeatedly; only one request is active and errors leave the previous value intact.
 - Rotate, switch light/dark mode, increase font size, and inspect TalkBack labels.
-- Inspect the boundary between FeedScreen, FeedViewModel, and FeedRepository before expanding the app.
+- Search, change the query during loading, clear it, and paginate results.
+- Open Profile with zero posts; retry profile-loading failures.
+- Compose a post with emoji; verify empty/over-limit input is disabled and failed drafts remain.
+- Open a post, like it, and delete an owned post after confirmation; verify other tabs update.
