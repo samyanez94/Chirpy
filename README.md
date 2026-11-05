@@ -1,139 +1,69 @@
 # Chirpy
 
-Chirpy is a native iOS and Android social-feed demo where birds post about life in the flock. It is a sandbox for SwiftUI,
-concurrency, networking, pagination, and testing.
+A little social network for the flock. Chirpy is a native **iOS and Android** demo where birds share updates, collect likes, and occasionally find a bagel.
 
-<p align="center">
-  <img src="docs/Images/feed.png" alt="Chirpy's social feed" width="320">
-</p>
+Built with **SwiftUI** on iOS and **Kotlin + Jetpack Compose** on Android, both apps share a Supabase backend. It’s a small, hands-on project for exploring native app development.
 
-## Features
+<table>
+  <tr>
+    <th align="center">iOS</th>
+    <th align="center">Android</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/Images/feed.png" alt="Chirpy on iOS: the Home feed with bird posts and photos" height="560"></td>
+    <td align="center"><img src="docs/Images/android-feed.png" alt="Chirpy on Android: the Home feed with bird posts and photos" height="560"></td>
+  </tr>
+</table>
 
-- Browse a reverse-chronological feed of bird posts
-- View the current profile and its posts
-- Load more posts as you scroll
-- Open a post to see its full text, image, and timestamp
-- Search posts with cursor pagination
-- Delete posts owned by the current profile
-- Create text-only posts
-- Like and unlike posts
-- Refresh with pull-to-refresh
+## Meet the flock
 
-Chirpy uses a shared demo profile for posts and likes. It does not require an account.
+- Browse bird posts and photos, with more loading as you scroll.
+- Search posts, explore the demo profile, and open posts for a closer look.
+- Like your favorites, write a text post, or delete one of your own.
+- Pull to refresh and catch up on the latest chatter.
 
-The Search tab supports [paginated post search](https://github.com/samyanez94/Chirpy/wiki/Backend#search).
+Both apps use a **shared demo profile**—there’s no sign-up or individual account.
 
-## Built With
+## Getting started
 
-- Swift and SwiftUI
-- Observation and Swift concurrency
-- URLSession for networking
-- Supabase Postgres, Storage, and Edge Functions
-- Swift Testing and Deno tests
-
-The iOS project targets iOS 26.5 or later. Both clients share the backend in this repository.
-The Android client implements the same Home, Search, Profile, post detail, composition, and deletion flows.
-
-## Repository Structure
-
-```text
-Chirpy/
-├── ios/
-│   ├── Chirpy.xcodeproj
-│   ├── Chirpy/              # App sources and assets
-│   ├── ChirpyTests/         # Tests and fixtures
-│   ├── Configuration/      # Local configuration template
-│   └── .swift-format
-├── android/                # Native Android client and Gradle build
-├── supabase/               # Shared backend, tests, and demo data
-│   ├── deno.json           # Backend tasks and tooling
-│   └── deno.lock
-└── docs/                   # Shared documentation assets
-```
-
-Each client owns its platform-specific code and build configuration. Backend Deno tooling lives in `supabase/`.
-
-## Running the Project
-
-1. Clone the repository.
-2. Copy `ios/Configuration/LocalConfiguration.example.plist` to `ios/Chirpy/LocalConfiguration.plist`.
-3. Set `ChirpyAPIKey` in the copied file to the personal API key configured on the backend.
-4. Open `ios/Chirpy.xcodeproj` in a compatible Xcode version and select the `Chirpy` scheme.
-5. Choose an iPhone Simulator or configure signing for your device, then build and run.
-
-The app connects to the hosted Supabase project by default. You need its configured API key, or you can run your own
-backend using the [backend guide](https://github.com/samyanez94/Chirpy/wiki/Backend). Keep the personal key private;
-never use a Supabase service-role key in the app.
-
-To run the iOS tests from the repository root, choose an installed simulator and run:
+Clone the repository, then choose your platform:
 
 ```sh
-xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
-  -destination 'platform=iOS Simulator,name=<simulator name>'
+git clone https://github.com/samyanez94/Chirpy.git
 ```
 
-For Android setup, architecture, and verification commands, see [the Android README](android/README.md).
+Both apps connect to the hosted demo backend by default. You’ll need its configured Chirpy API key, or you can [run your own backend](https://github.com/samyanez94/Chirpy/wiki/Backend#run-the-backend-locally).
 
-## Backend Development
+Use the dedicated Chirpy key, never a Supabase service-role key. Local key files are Git-ignored; the key is bundled into your app build.
 
-Run the Deno tasks from `supabase/`:
+### iOS
 
-```sh
-cd supabase
-deno task verify      # Type checks, lint, unit tests, and demo validation
-deno task test:db     # SQL integration tests against the running local stack
-deno task check       # Type-check Edge Functions and the seed generator
-deno task test        # Run the social-feed tests
-deno task demo:build  # Regenerate local demo SQL files
-deno task demo:check  # Validate demo assets and generated SQL
-```
+You’ll need **Xcode with support for iOS 26.5 or later** and an iPhone simulator or device.
 
-From the repository root, you can also select the configuration explicitly, for example:
-`deno task --config supabase/deno.json test`.
+1. Copy the configuration template:
+   ```sh
+   cp ios/Configuration/LocalConfiguration.example.plist ios/Chirpy/LocalConfiguration.plist
+   ```
+2. Set `ChirpyAPIKey` in the copied file to your backend’s Chirpy API key.
+3. Open `ios/Chirpy.xcodeproj`, select the **Chirpy** scheme and an iPhone simulator, then run.
+   For a physical device, configure signing in Xcode first.
 
-Continue running Supabase CLI commands and `sh supabase/scripts/publish_bird_demo.sh` from the repository root.
-The demo build task only generates local files; publishing is a separate step.
+Using your own backend? Update `baseURL` in [AppConfiguration.swift](ios/Chirpy/AppConfiguration.swift).
 
-## Continuous integration
+### Android
 
-GitHub Actions validates all three projects on every pull request, push to `main`, and manual run.
-New pushes cancel superseded runs for the same workflow and branch. CI uses no production secrets
-and does not deploy the backend or publish apps.
+You’ll need **Android Studio**, **Android SDK Platform 37.0**, and **Build Tools 36.0.0**. Run on an emulator or device with **Android 8.0 (API 26) or later**.
 
-| Required check | Validation | Local equivalent |
-| --- | --- | --- |
-| Supabase validation | Type checks, lint, unit tests, demo data, fresh migrations/seed, SQL integration tests | In `supabase/`: `deno task verify`, then `deno task test:db` against a running local stack |
-| iOS validation | Swift formatting, simulator tests, Release compilation | Commands below |
-| Android validation | Formatting, detekt, lint, JVM tests, debug and optimized Release APKs | In `android/`: `./gradlew fullValidation` |
-| Android UI tests | Compose tests on an API 35 emulator | In `android/`: `./gradlew connectedDebugAndroidTest` |
+1. Copy the configuration template:
+   ```sh
+   cp android/chirpy.properties.example android/chirpy.properties
+   ```
+2. Set `CHIRPY_API_KEY` in the copied file. Set `CHIRPY_BASE_URL` too if you’re using your own backend.
+3. Open the `android/` directory in Android Studio, sync Gradle, and run the **app** configuration.
 
-For iOS, from the repository root:
+See the [Wiki development guide](https://github.com/samyanez94/Chirpy/wiki/Development#run-android) for Java requirements, local backend settings, and test commands.
 
-```sh
-xcrun swift-format lint --strict --recursive ios/Chirpy ios/ChirpyTests
-xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
-  -destination 'platform=iOS Simulator,name=<simulator name>' CODE_SIGNING_ALLOWED=NO
-xcodebuild build -project ios/Chirpy.xcodeproj -scheme Chirpy \
-  -configuration Release -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO
-```
+## Learn more
 
-CI selects Xcode 26.6 and reuses an available iOS 26.5 runtime and iPhone simulator (preferring iPhone 17 Pro).
-It downloads the runtime or creates a simulator only when missing. Backend tooling is pinned to Deno 2.9.5
-and Supabase CLI 2.115.0. Android uses JDK 17 for SDK tools and analysis; Gradle automatically
-provisions JetBrains JDK 25 according to its committed daemon criteria. Action revisions are pinned.
-
-Test/analysis reports and failure diagnostics are available as workflow artifacts for seven days.
-The iOS tests use stubbed clients; CI omits the optional local API-key configuration. Backend SQL
-tests run only against the ephemeral local database. Client tests do not require a hosted backend.
-
-Require the four checks above in the `main` branch protection settings after their first successful
-runs. Workflow files alone do not enforce merge restrictions. Keep required workflows running on
-all pull requests; adding path filters can leave required checks pending.
-
-## Documentation
-
-- [App Overview](https://github.com/samyanez94/Chirpy/wiki/App-Overview) — app behavior, the bird demo, and current
-  limits.
-- [Architecture](https://github.com/samyanez94/Chirpy/wiki/Architecture) — state, networking, and the backend.
-- [Development](https://github.com/samyanez94/Chirpy/wiki/Development) — run and test the iOS app.
-- [Backend](https://github.com/samyanez94/Chirpy/wiki/Backend) — Supabase setup, API reference, tests, and deployment.
+Visit the [Chirpy Wiki](https://github.com/samyanez94/Chirpy/wiki) for app background, architecture, and backend documentation. For local test commands and CI details, see the
+[Wiki development guide](https://github.com/samyanez94/Chirpy/wiki/Development).
