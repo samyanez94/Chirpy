@@ -47,6 +47,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.samuel.chirpy.R
 import com.samuel.chirpy.core.ui.PostRow
 import com.samuel.chirpy.core.ui.rememberRelativePostDateFormatter
@@ -59,7 +62,7 @@ fun FeedScreen(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onLike: (String) -> Unit,
-    onMessageDismissed: () -> Unit,
+    onMessageDismissed: (Long) -> Unit,
     title: String = stringResource(R.string.home),
     onPost: (com.samuel.chirpy.core.model.Post) -> Unit = {},
     showToolbar: Boolean = true,
@@ -70,11 +73,16 @@ fun FeedScreen(
     val listState = rememberLazyListState()
     val pullToRefreshState = rememberPullToRefreshState()
     val snackbar = remember { SnackbarHostState() }
-    val message = state.message?.let { stringResource(it.resourceId()) }
-    LaunchedEffect(message) {
-        if (message != null) {
-            snackbar.showSnackbar(message)
-            currentOnMessageDismissed()
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val message = state.message
+    val messageText = message?.let { stringResource(it.kind.resourceId()) }
+    LaunchedEffect(message?.id, messageText, lifecycle) {
+        if (message != null && messageText != null) {
+            // Keep pending errors until they can be shown while the feed is visible.
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                snackbar.showSnackbar(messageText)
+                currentOnMessageDismissed(message.id)
+            }
         }
     }
     FeedPaginationEffect(state, listState, onLoadMore)

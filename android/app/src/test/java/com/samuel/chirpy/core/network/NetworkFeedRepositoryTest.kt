@@ -94,7 +94,10 @@ class NetworkFeedRepositoryTest {
             server.enqueue(
                 MockResponse().setBody("""{"postID":"post","isLiked":$liked,"likeCount":3}"""),
             )
-            assertEquals(liked, repository.setLike("post", liked).isLiked)
+            val update = repository.setLike("post", liked)
+            assertEquals("post", update.postId)
+            assertEquals(liked, update.isLiked)
+            assertEquals(3, update.likeCount)
             val request = server.takeRequest()
             assertEquals(method, request.method)
             assertEquals("/functions/v1/posts/post/like", request.path)

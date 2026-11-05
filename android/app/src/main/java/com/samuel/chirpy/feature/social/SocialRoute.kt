@@ -63,12 +63,12 @@ fun SocialRoute(repository: SocialRepository) {
     }
     val timeline: @Composable () -> Unit = {
         Timeline(
-            feedState,
-            refresh,
-            activeFeed::loadMore,
-            activeFeed::toggleLike,
-            activeFeed::dismissMessage,
-            social::openPost,
+            state = feedState,
+            onRefresh = refresh,
+            onLoadMore = activeFeed::loadMore,
+            onLike = activeFeed::toggleLike,
+            onMessageDismissed = activeFeed::dismissMessage,
+            onPost = social::openPost,
         )
     }
     BackHandler(state.destination != SocialDestination.Timeline || tab != FeedMode.Home) {

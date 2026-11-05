@@ -108,7 +108,7 @@ class FeedViewModelTest {
         model.refresh()
         advanceUntilIdle()
         assertEquals(1, model.state.value.posts.size)
-        assertEquals(FeedMessage.RefreshFailed, model.state.value.message)
+        assertEquals(FeedMessage.RefreshFailed, model.state.value.message?.kind)
         assertNull(model.state.value.initialError)
         assertFalse(model.state.value.isRefreshing)
     }
@@ -205,12 +205,13 @@ class FeedViewModelTest {
         model.toggleLike("one")
         advanceUntilIdle()
         assertFalse(model.state.value.posts.single().isLiked)
-        assertEquals(FeedMessage.LikeFailed, model.state.value.message)
+        assertEquals(FeedMessage.LikeFailed, model.state.value.message?.kind)
         assertTrue(model.state.value.pendingLikes.isEmpty())
     }
 
     @Test
     fun lateRefreshDoesNotOverwriteCompletedLike() = runTest(dispatcher) {
+        repository.like = { id, liked -> LikeUpdate(id, liked, 42) }
         val model = FeedViewModel(repository)
         advanceUntilIdle()
         val response = CompletableDeferred<FeedPage>()
@@ -222,6 +223,7 @@ class FeedViewModelTest {
         response.complete(FeedPage(listOf(post("one")), null))
         advanceUntilIdle()
         assertTrue(model.state.value.posts.single().isLiked)
+        assertEquals(42, model.state.value.posts.single().likeCount)
     }
 
     private class FakeRepository(

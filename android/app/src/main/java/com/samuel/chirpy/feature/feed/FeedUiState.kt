@@ -11,5 +11,5 @@ data class FeedUiState(
     val initialError: FeedMessage? = null,
     val paginationFailed: Boolean = false,
     val pendingLikes: Set<String> = emptySet(),
-    val message: FeedMessage? = null,
+    val message: FeedSnackbarMessage? = null,
 )
