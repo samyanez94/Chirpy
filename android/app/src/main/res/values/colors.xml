@@ -1,3 +1,4 @@
 <resources>
-  <color name="ic_launcher_background">#28644B</color>
+  <color name="chirpy_blue">#007AFF</color>
+  <color name="ic_launcher_background">@color/chirpy_blue</color>
 </resources>
