@@ -61,7 +61,7 @@ You’ll need **Android Studio**, **Android SDK Platform 37.0**, and **Build Too
 2. Set `CHIRPY_API_KEY` in the copied file. Set `CHIRPY_BASE_URL` too if you’re using your own backend.
 3. Open the `android/` directory in Android Studio, sync Gradle, and run the **app** configuration.
 
-See the [Android guide](android/README.md) for Java requirements, local backend settings, and test commands.
+See the [development reference](docs/Development.md#android-development) for Java requirements, local backend settings, and test commands.
 
 ## Learn more
 

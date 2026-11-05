@@ -1,7 +1,6 @@
 # Development reference
 
-See the [project README](../README.md#getting-started) to run either app, or the
-[Android guide](../android/README.md) for Android-specific setup and verification.
+See the [project README](../README.md#getting-started) to run either app.
 This reference keeps the local commands and CI details together.
 
 ## iOS tests
@@ -14,6 +13,31 @@ xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
 ```
 
 In Xcode, you can also use **Product → Test**. Client tests do not require a hosted backend.
+
+## Android development
+
+Use JDK 17 or newer supported by the Gradle wrapper. Gradle provisions its daemon JDK
+from the committed toolchain configuration. Android Studio creates `local.properties`
+with your SDK location.
+
+For a local backend on the Android emulator, set
+`CHIRPY_BASE_URL=http://10.0.2.2:54321/` in `android/chirpy.properties` and use the local
+backend's Chirpy API key. Environment variables override values in that file.
+Both local property files are Git-ignored. Release builds require HTTPS.
+
+From `android/`:
+
+```sh
+./gradlew format
+./gradlew qualityCheck
+./gradlew fullValidation
+./gradlew connectedDebugAndroidTest
+```
+
+`qualityCheck` runs formatting checks, detekt, Android Lint, JVM tests, and the debug build.
+`fullValidation` also builds the optimized release APK. Neither requires an API key or server.
+UI tests require a running emulator; use API 35, matching CI. The pinned Espresso dependency
+has an input-injection compatibility issue on API 37.
 
 ## Backend Development
 
