@@ -11,15 +11,15 @@ internal fun Timeline(
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onLike: (String) -> Unit,
-    onMessageDismissed: () -> Unit,
+    onMessageDismissed: (Long) -> Unit,
     onPost: (Post) -> Unit,
 ) {
     FeedScreen(
-        state,
-        onRefresh,
-        onLoadMore,
-        onLike,
-        onMessageDismissed,
+        state = state,
+        onRefresh = onRefresh,
+        onLoadMore = onLoadMore,
+        onLike = onLike,
+        onMessageDismissed = onMessageDismissed,
         onPost = onPost,
         showToolbar = false,
     )
