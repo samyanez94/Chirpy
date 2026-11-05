@@ -61,6 +61,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.preview)
     implementation(libs.activity.compose)
+    implementation(libs.navigation3.runtime)
+    implementation(libs.navigation3.ui)
     implementation(libs.lifecycle.compose)
     implementation(libs.lifecycle.viewmodel)
     implementation(libs.coroutines.android)
