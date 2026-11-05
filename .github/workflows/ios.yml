@@ -14,8 +14,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: iOS quality
+  validation:
+    name: iOS validation
     runs-on: macos-26
     timeout-minutes: 30
     env:
@@ -24,11 +24,44 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Check Swift formatting
         run: xcrun swift-format lint --strict --recursive ios/Chirpy ios/ChirpyTests
+      - name: Prepare iOS simulator
+        id: simulator
+        timeout-minutes: 15
+        run: |
+          runtime_id=com.apple.CoreSimulator.SimRuntime.iOS-26-5
+          runtimes=$(xcrun simctl list runtimes --json)
+          if ! jq -e --arg runtime "$runtime_id" \
+            'any(.runtimes[]; .identifier == $runtime and .isAvailable)' <<< "$runtimes" > /dev/null; then
+            echo "iOS 26.5 runtime unavailable; downloading it."
+            xcodebuild -downloadPlatform iOS -buildVersion 26.5 -architectureVariant arm64
+          else
+            echo "Reusing installed iOS 26.5 runtime."
+          fi
+
+          devices=$(xcrun simctl list devices available --json)
+          device_id=$(jq -r --arg runtime "$runtime_id" '
+            [.devices[$runtime][]?
+              | select(.isAvailable and (.deviceTypeIdentifier | startswith("com.apple.CoreSimulator.SimDeviceType.iPhone-")))]
+            | sort_by(.deviceTypeIdentifier != "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro", .udid)
+            | first | .udid // empty
+          ' <<< "$devices")
+          if [ -z "$device_id" ]; then
+            echo "No available iPhone on iOS 26.5; creating one."
+            device_id=$(xcrun simctl create 'Chirpy CI' \
+              com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro "$runtime_id")
+          else
+            echo "Reusing iPhone simulator $device_id."
+          fi
+          echo "device-id=${device_id}" >> "$GITHUB_OUTPUT"
+          # bootstatus -b boots a shutdown device and also accepts an already booted device.
+          xcrun simctl bootstatus "$device_id" -b
       # Missing local configuration is supported and prevents authenticated network requests.
       - name: Build and test on iPhone simulator
+        env:
+          SIMULATOR_ID: ${{ steps.simulator.outputs.device-id }}
         run: |
           xcodebuild test -project ios/Chirpy.xcodeproj -scheme Chirpy \
-            -destination 'platform=iOS Simulator,name=iPhone 17 Pro,OS=26.5' \
+            -destination "platform=iOS Simulator,id=${SIMULATOR_ID}" \
             -derivedDataPath "${RUNNER_TEMP}/ChirpyDerivedData" \
             -resultBundlePath "${RUNNER_TEMP}/ChirpyTests.xcresult" \
             CODE_SIGNING_ALLOWED=NO
