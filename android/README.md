@@ -116,7 +116,7 @@ References: [detekt compatibility](https://detekt.dev/docs/1.23.8/introduction/c
 
 After pushing the workflow and allowing its first run, open **Settings → Rules → Rulesets** (or
 **Branches → Branch protection rules**) for `main`. Require pull requests and status checks, and
-select **Android quality** from the GitHub Actions checks. Also require **Android UI tests**, **iOS quality**, and **Supabase quality**.
+select **Android validation** from the GitHub Actions checks. Also require **Android UI tests**, **iOS validation**, and **Supabase validation**.
 The workflow runs on every pull request and push to main, so path filtering cannot leave a required
 check pending for iOS-only changes. Repository administrators must enable this rule; committing the
 workflow alone does not prevent merging. See the repository README for the cross-platform CI commands and reports.
