@@ -12,7 +12,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -29,6 +28,55 @@ class SocialViewModelTest {
 
     @After fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    @Test fun backStackKeepsTimelineAndNeverPopsItsRoot() = runTest(dispatcher) {
+        val model = SocialViewModel(repository)
+        model.close()
+        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+        model.compose()
+        model.compose()
+        assertEquals(
+            listOf(SocialDestination.Timeline, SocialDestination.Composer),
+            model.state.value.backStack,
+        )
+        model.editDraft("Keep my draft")
+        model.close()
+        model.compose()
+        assertEquals("Keep my draft", model.state.value.composer.draft)
+        model.close()
+        model.openPost(repository.post("post"))
+        val detailStack = model.state.value.backStack
+        model.toggleLike()
+        advanceUntilIdle()
+        assertEquals(detailStack, model.state.value.backStack)
+        assertEquals(SocialDestination.Detail("post"), detailStack.last())
+        assertTrue(model.state.value.selectedPost!!.isLiked)
+        model.close()
+        model.close()
+        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+        repository.pendingPostIds.value = setOf("post")
+        advanceUntilIdle()
+        model.compose()
+        model.close()
+        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+    }
+
+    @Test fun pendingDetailMutationBlocksBackUntilCompletion() = runTest(dispatcher) {
+        val response = CompletableDeferred<Unit>()
+        repository.like = { id, liked ->
+            response.await()
+            com.samuel.chirpy.core.model.LikeUpdate(id, liked, 1)
+        }
+        val model = SocialViewModel(repository)
+        model.openPost(repository.post("post"))
+        model.toggleLike()
+        model.close()
+        assertEquals(SocialDestination.Detail("post"), model.state.value.destination)
+        response.complete(Unit)
+        advanceUntilIdle()
+        model.close()
+        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
     }
 
     @Test fun draftValidationMatchesServerUnicodeRules() {
@@ -99,12 +147,12 @@ class SocialViewModelTest {
         model.openPost(own)
         model.delete()
         advanceUntilIdle()
-        assertEquals(own, (model.state.value.destination as? SocialDestination.Detail)?.post)
+        assertEquals(own, model.state.value.selectedPost)
         assertTrue(model.state.value.detail.hasFailed)
         repository.delete = {}
         model.delete()
         advanceUntilIdle()
-        assertNull((model.state.value.destination as? SocialDestination.Detail)?.post)
+        assertEquals(SocialDestination.Timeline, model.state.value.destination)
     }
 
     @Test fun detailLikeFailureLeavesCountAndAllowsRetry() = runTest(dispatcher) {
@@ -115,7 +163,7 @@ class SocialViewModelTest {
         advanceUntilIdle()
         assertEquals(
             0,
-            (model.state.value.destination as? SocialDestination.Detail)?.post?.likeCount,
+            model.state.value.selectedPost?.likeCount,
         )
         assertFalse(model.state.value.detail.isLiking)
         assertTrue(model.state.value.detail.hasFailed)
@@ -141,6 +189,6 @@ class SocialViewModelTest {
         advanceUntilIdle()
         assertEquals(1, calls)
         assertFalse(model.state.value.detail.isBusy)
-        assertEquals(true, (model.state.value.destination as SocialDestination.Detail).post.isLiked)
+        assertEquals(true, model.state.value.selectedPost!!.isLiked)
     }
 }

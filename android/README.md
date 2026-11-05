@@ -59,7 +59,10 @@ build an unsigned release APK; production signing is not configured yet.
 - The repository owns cached current-profile state and shares active/queued mutation IDs across screens.
   Likes and deletion serialize per post; unrelated posts can update concurrently.
 - Route composables collect ViewModel state and wire callbacks. Search, Profile, Composer, and Detail
-  render immutable state. Explicit destinations separate navigation from composer/detail operation state.
+  render immutable state. Navigation 3 NavDisplay renders a ViewModel-owned back stack with stable
+  destination keys; mutable post content stays separate from route IDs. Entry decorators retain screen
+  state, and tab state survives detail/composer visits. Back returns to the timeline, then Home.
+  Active post mutations block dismissal; successful publishing/deletion returns to the timeline.
 
 The screen renders state and sends actions. The ViewModel owns pagination and per-post mutation state;
 only the repository performs network requests. Generation checks reject superseded results. Like responses

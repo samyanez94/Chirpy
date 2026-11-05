@@ -1,9 +1,9 @@
 package com.samuel.chirpy.feature.social
 
-import com.samuel.chirpy.core.model.Post
+import androidx.navigation3.runtime.NavKey
 
-sealed interface SocialDestination {
+sealed interface SocialDestination : NavKey {
     data object Timeline : SocialDestination
     data object Composer : SocialDestination
-    data class Detail(val post: Post) : SocialDestination
+    data class Detail(val postId: String) : SocialDestination
 }

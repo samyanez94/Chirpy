@@ -24,7 +24,9 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
         viewModelScope.launch {
             repository.pendingPostIds.collect { pending ->
                 mutableState.update {
-                    val post = (it.destination as? SocialDestination.Detail)?.post
+                    val post = it.selectedPost.takeIf { _ ->
+                        it.destination is SocialDestination.Detail
+                    }
                     it.copy(detail = it.detail.copy(isPending = post?.id in pending))
                 }
             }
@@ -37,19 +39,19 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
 
     private fun applyChange(change: PostChange) {
         mutableState.update { current ->
-            val post = (current.destination as? SocialDestination.Detail)?.post
+            val post = current.selectedPost.takeIf {
+                current.destination is SocialDestination.Detail
+            }
             when {
                 change is PostChange.Liked && post?.id == change.update.postId -> current.copy(
-                    destination = SocialDestination.Detail(
-                        post.copy(
-                            isLiked = change.update.isLiked,
-                            likeCount = change.update.likeCount,
-                        ),
+                    selectedPost = post.copy(
+                        isLiked = change.update.isLiked,
+                        likeCount = change.update.likeCount,
                     ),
                 )
 
                 change is PostChange.Deleted && post?.id == change.id -> current.copy(
-                    destination = SocialDestination.Timeline,
+                    backStack = listOf(SocialDestination.Timeline),
                     detail = DetailUiState(),
                 )
 
@@ -72,18 +74,21 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
     }
 
     fun openPost(post: Post) {
+        if (state.value.composer.isPosting || state.value.detail.isBusy) return
         mutableState.update {
             it.copy(
-                destination = SocialDestination.Detail(post),
+                backStack = listOf(SocialDestination.Timeline, SocialDestination.Detail(post.id)),
+                selectedPost = post,
                 detail = DetailUiState(isPending = post.id in repository.pendingPostIds.value),
             )
         }
     }
 
     fun compose() {
+        if (state.value.destination != SocialDestination.Timeline) return
         mutableState.update {
             it.copy(
-                destination = SocialDestination.Composer,
+                backStack = listOf(SocialDestination.Timeline, SocialDestination.Composer),
                 composer = it.composer.copy(hasFailed = false),
             )
         }
@@ -98,7 +103,7 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
     fun close() {
         if (state.value.composer.isPosting || state.value.detail.isBusy) return
         mutableState.update {
-            it.copy(destination = SocialDestination.Timeline, detail = DetailUiState())
+            it.copy(backStack = listOf(SocialDestination.Timeline), detail = DetailUiState())
         }
     }
 
@@ -112,7 +117,10 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
             try {
                 repository.createPost(PostDraft.trimmed(composer.draft))
                 mutableState.update {
-                    it.copy(destination = SocialDestination.Timeline, composer = ComposerUiState())
+                    it.copy(
+                        backStack = listOf(SocialDestination.Timeline),
+                        composer = ComposerUiState(),
+                    )
                 }
             } catch (error: CancellationException) {
                 throw error
@@ -126,7 +134,8 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
 
     fun delete() {
         val current = state.value
-        val post = (current.destination as? SocialDestination.Detail)?.post ?: return
+        if (current.destination !is SocialDestination.Detail) return
+        val post = current.selectedPost ?: return
         if (current.detail.isBusy || post.id in repository.pendingPostIds.value ||
             repository.currentProfileState.value.profile?.id != post.author.id
         ) {
@@ -151,7 +160,8 @@ class SocialViewModel(private val repository: SocialRepository) : ViewModel() {
 
     fun toggleLike() {
         val current = state.value
-        val post = (current.destination as? SocialDestination.Detail)?.post ?: return
+        if (current.destination !is SocialDestination.Detail) return
+        val post = current.selectedPost ?: return
         if (current.detail.isBusy || post.id in repository.pendingPostIds.value) return
         mutableState.update { it.copy(detail = it.detail.copy(isLiking = true, hasFailed = false)) }
         viewModelScope.launch {

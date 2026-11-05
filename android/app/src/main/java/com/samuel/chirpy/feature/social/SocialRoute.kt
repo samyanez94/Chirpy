@@ -32,6 +32,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import com.samuel.chirpy.R
 import com.samuel.chirpy.core.data.SocialRepository
 import com.samuel.chirpy.feature.feed.FeedMode
@@ -73,76 +76,105 @@ fun SocialRoute(repository: SocialRepository) {
             onPost = social::openPost,
         )
     }
-    BackHandler(state.destination != SocialDestination.Timeline || tab != FeedMode.Home) {
-        if (state.destination != SocialDestination.Timeline) social.close() else tab = FeedMode.Home
+    BackHandler(state.destination == SocialDestination.Timeline && tab != FeedMode.Home) {
+        tab = FeedMode.Home
     }
-    when (val destination = state.destination) {
-        SocialDestination.Composer -> ComposerScreen(
-            state.composer,
-            social::editDraft,
-            social::publish,
-            social::close,
-        )
-
-        is SocialDestination.Detail -> DetailScreen(
-            destination.post,
-            state.detail,
-            state.profile,
-            social::toggleLike,
-            social::delete,
-            social::close,
-            { social.loadProfile(refresh = true) },
-        )
-
-        SocialDestination.Timeline -> Scaffold(
-            topBar = {
-                TopAppBar(title = { Text(stringResource(tab.titleResource())) }, actions = {
-                    IconButton(
-                        onClick = refresh,
-                        enabled =
-                        !feedState.isLoading && !feedState.isRefreshing,
+    NavDisplay(
+        backStack = state.backStack,
+        onBack = social::close,
+        entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
+        entryProvider = entryProvider {
+            entry<SocialDestination.Composer> {
+                ComposerScreen(
+                    state.composer,
+                    social::editDraft,
+                    social::publish,
+                    social::close,
+                )
+            }
+            entry<SocialDestination.Detail> { destination ->
+                state.selectedPost?.takeIf { it.id == destination.postId }?.let { post ->
+                    DetailScreen(
+                        post,
+                        state.detail,
+                        state.profile,
+                        social::toggleLike,
+                        social::delete,
+                        social::close,
+                        { social.loadProfile(refresh = true) },
+                    )
+                }
+            }
+            entry<SocialDestination.Timeline> {
+                Scaffold(
+                    topBar = {
+                        TopAppBar(title = { Text(stringResource(tab.titleResource())) }, actions = {
+                            IconButton(
+                                onClick = refresh,
+                                enabled =
+                                !feedState.isLoading && !feedState.isRefreshing,
+                            ) {
+                                Icon(
+                                    painterResource(R.drawable.ic_refresh),
+                                    stringResource(R.string.refresh),
+                                )
+                            }
+                        })
+                    },
+                    bottomBar = {
+                        NavigationBar {
+                            FeedMode.entries.forEach { mode ->
+                                val label = stringResource(mode.titleResource())
+                                NavigationBarItem(
+                                    selected = tab == mode,
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                                    ),
+                                    onClick = { tab = mode },
+                                    icon = { Icon(painterResource(mode.iconResource()), null) },
+                                    label = { Text(label) },
+                                )
+                            }
+                        }
+                    },
+                    floatingActionButton = {
+                        FloatingActionButton(onClick = social::compose) {
+                            Text(
+                                stringResource(R.string.new_post),
+                                Modifier.padding(horizontal = 16.dp),
+                            )
+                        }
+                    },
+                ) { padding ->
+                    Column(
+                        Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding),
                     ) {
-                        Icon(
-                            painterResource(R.drawable.ic_refresh),
-                            stringResource(R.string.refresh),
-                        )
-                    }
-                })
-            },
-            bottomBar = {
-                NavigationBar {
-                    FeedMode.entries.forEach { mode ->
-                        val label = stringResource(mode.titleResource())
-                        NavigationBarItem(
-                            selected = tab == mode,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                            ),
-                            onClick = { tab = mode },
-                            icon = { Icon(painterResource(mode.iconResource()), null) },
-                            label = { Text(label) },
-                        )
-                    }
-                }
-            },
-            floatingActionButton = {
-                FloatingActionButton(onClick = social::compose) {
-                    Text(stringResource(R.string.new_post), Modifier.padding(horizontal = 16.dp))
-                }
-            },
-        ) { padding ->
-            Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
-                savedTabs.SaveableStateProvider(tab.name) {
-                    when (tab) {
-                        FeedMode.Home -> timeline()
-                        FeedMode.Search -> SearchScreen(searchText, { searchText = it }, timeline)
-                        FeedMode.Profile -> ProfileScreen(state.profile, refresh, timeline)
+                        savedTabs.SaveableStateProvider(tab.name) {
+                            when (tab) {
+                                FeedMode.Home -> timeline()
+
+                                FeedMode.Search -> SearchScreen(searchText, {
+                                    searchText = it
+                                }, timeline)
+
+                                FeedMode.Profile -> ProfileScreen(
+                                    state.profile,
+                                    refresh,
+                                    timeline,
+                                )
+                            }
+                        }
                     }
                 }
             }
-        }
-    }
+        },
+    )
+    // Consume Back while a mutation is active, including before a predictive pop starts.
+    BackHandler(
+        state.destination != SocialDestination.Timeline &&
+            (state.composer.isPosting || state.detail.isBusy),
+    ) {}
 }
 
 @Composable
