@@ -119,7 +119,7 @@ After pushing the workflow and allowing its first run, open **Settings → Rules
 select **Android validation** from the GitHub Actions checks. Also require **Android UI tests**, **iOS validation**, and **Supabase validation**.
 The workflow runs on every pull request and push to main, so path filtering cannot leave a required
 check pending for iOS-only changes. Repository administrators must enable this rule; committing the
-workflow alone does not prevent merging. See the repository README for the cross-platform CI commands and reports.
+workflow alone does not prevent merging. See the [development reference](../docs/Development.md#continuous-integration) for cross-platform CI commands and reports.
 
 ## Review checklist
 
