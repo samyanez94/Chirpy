@@ -31,6 +31,7 @@ class FeedViewModel(
     private var pageJob: Job? = null
     private var generation = 0
     private var mutationVersion = 0L
+    private var messageId = 0L
     private val likeVersions = mutableMapOf<String, Long>()
     private val likeUpdates = mutableMapOf<String, LikeUpdate>()
 
@@ -145,6 +146,7 @@ class FeedViewModel(
                 throw error
             } catch (error: Exception) {
                 if (generation != requestGeneration) return@launch
+                val message = FeedSnackbarMessage(++messageId, FeedMessage.RefreshFailed)
                 mutableState.update {
                     it.copy(
                         isLoading = false,
@@ -159,7 +161,7 @@ class FeedViewModel(
                         } else {
                             null
                         },
-                        message = if (it.posts.isNotEmpty()) FeedMessage.RefreshFailed else null,
+                        message = if (it.posts.isNotEmpty()) message else null,
                     )
                 }
             }
@@ -221,7 +223,8 @@ class FeedViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                mutableState.update { it.copy(message = FeedMessage.LikeFailed) }
+                val message = FeedSnackbarMessage(++messageId, FeedMessage.LikeFailed)
+                mutableState.update { it.copy(message = message) }
             } finally {
                 localPendingLikes.remove(postId)
                 mutableState.update {
@@ -243,8 +246,10 @@ class FeedViewModel(
             }
         }
 
-    fun dismissMessage() {
-        mutableState.update { it.copy(message = null) }
+    fun dismissMessage(messageId: Long) {
+        mutableState.update {
+            if (it.message?.id == messageId) it.copy(message = null) else it
+        }
     }
 
     companion object {

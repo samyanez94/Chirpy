@@ -23,7 +23,15 @@ private fun HomePreview() {
             isLiked = true,
             likeCount = 12,
         )
-    ChirpyTheme { FeedScreen(FeedUiState(posts = listOf(post), isLoading = false), {}, {}, {}, {}) }
+    ChirpyTheme {
+        FeedScreen(
+            state = FeedUiState(posts = listOf(post), isLoading = false),
+            onRefresh = {},
+            onLoadMore = {},
+            onLike = {},
+            onMessageDismissed = {},
+        )
+    }
 }
 
 @Preview(name = "Home error")
@@ -31,11 +39,11 @@ private fun HomePreview() {
 private fun ErrorPreview() {
     ChirpyTheme {
         FeedScreen(
-            FeedUiState(isLoading = false, initialError = FeedMessage.LoadFailed),
-            {},
-            {},
-            {},
-            {},
+            state = FeedUiState(isLoading = false, initialError = FeedMessage.LoadFailed),
+            onRefresh = {},
+            onLoadMore = {},
+            onLike = {},
+            onMessageDismissed = {},
         )
     }
 }
