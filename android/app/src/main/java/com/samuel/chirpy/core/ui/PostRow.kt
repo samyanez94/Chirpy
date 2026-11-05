@@ -64,7 +64,7 @@ fun PostRow(
                 modifier = Modifier.size(44.dp),
             )
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f)) {
             FlowRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -88,8 +88,12 @@ fun PostRow(
                 )
                 RelativePostDate(post.createdAt, formatDate, Modifier.alignByBaseline())
             }
+            Spacer(Modifier.size(8.dp))
             Text(post.text, style = MaterialTheme.typography.bodyLarge)
-            post.imageUrl?.let { PostImage(it, post.author.displayName) }
+            post.imageUrl?.let {
+                Spacer(Modifier.size(8.dp))
+                PostImage(it, post.author.displayName)
+            }
             val action = stringResource(if (post.isLiked) R.string.unlike else R.string.like)
             val count = pluralStringResource(R.plurals.likes_count, post.likeCount, post.likeCount)
             Row(

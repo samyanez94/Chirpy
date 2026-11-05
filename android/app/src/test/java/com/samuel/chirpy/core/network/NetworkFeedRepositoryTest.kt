@@ -2,6 +2,8 @@ package com.samuel.chirpy.core.network
 
 import com.samuel.chirpy.core.data.ApiException
 import com.samuel.chirpy.core.data.MissingApiKeyException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -97,5 +99,96 @@ class NetworkFeedRepositoryTest {
             assertEquals(method, request.method)
             assertEquals("/functions/v1/posts/post/like", request.path)
         }
+    }
+
+    @Test
+    fun searchAndProfileRequestsPreserveFiltersAndCursors() = runTest {
+        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val body = checkNotNull(javaClass.getResource("/social-feed-page.json")).readText()
+        server.enqueue(MockResponse().setBody(body))
+        repository.searchPosts("birds + 🐦 & trees", "next+/=", 20)
+        val search = server.takeRequest()
+        assertEquals("/functions/v1/search", search.requestUrl?.encodedPath)
+        assertEquals("birds + 🐦 & trees", search.requestUrl?.queryParameter("q"))
+        assertEquals("next+/=", search.requestUrl?.queryParameter("cursor"))
+        server.enqueue(MockResponse().setBody(body))
+        repository.profilePosts("profile-id", "opaque", 20)
+        val profile = server.takeRequest()
+        assertEquals("profile-id", profile.requestUrl?.queryParameter("profile_id"))
+        assertEquals("opaque", profile.requestUrl?.queryParameter("cursor"))
+    }
+
+    @Test
+    fun profileCreationAndDeletionUseSharedApiContract() = runTest {
+        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        server.enqueue(
+            MockResponse().setBody("""{"id":"me","username":"bird","displayName":"Bird"}"""),
+        )
+        assertEquals("me", repository.currentProfile().id)
+        assertEquals("/functions/v1/profile", server.takeRequest().path)
+        val page = kotlinx.serialization.json.Json.parseToJsonElement(
+            checkNotNull(javaClass.getResource("/social-feed-page.json")).readText(),
+        ) as kotlinx.serialization.json.JsonObject
+        val post = (page.getValue("posts") as kotlinx.serialization.json.JsonArray).first()
+        server.enqueue(MockResponse().setBody(post.toString()))
+        repository.createPost("Hello 🐦")
+        val create = server.takeRequest()
+        assertEquals("POST", create.method)
+        assertEquals("/functions/v1/posts", create.path)
+        assertEquals("""{"text":"Hello 🐦"}""", create.body.readUtf8())
+        server.enqueue(MockResponse().setResponseCode(204))
+        repository.deletePost("post")
+        val delete = server.takeRequest()
+        assertEquals("DELETE", delete.method)
+        assertEquals("/functions/v1/posts/post", delete.path)
+    }
+
+    @Test
+    fun missingPostDeletionSucceedsButForbiddenDeletionFails() = runTest {
+        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        server.enqueue(
+            MockResponse().setResponseCode(404).setBody(
+                """{"error":{"code":"post_not_found","message":"Gone","requestID":"request"}}""",
+            ),
+        )
+        repository.deletePost("gone")
+        server.enqueue(
+            MockResponse().setResponseCode(403).setBody(
+                """{"error":{"code":"forbidden","message":"Not yours","requestID":"request"}}""",
+            ),
+        )
+        try {
+            repository.deletePost("other")
+            fail("Expected forbidden deletion")
+        } catch (error: ApiException) {
+            assertEquals("forbidden", error.code)
+        }
+    }
+
+    @Test
+    fun concurrentProfileLoadsShareCacheAndFailedRefreshPreservesProfile() = runTest {
+        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        server.enqueue(
+            MockResponse().setBody("""{"id":"me","username":"bird","displayName":"Bird"}"""),
+        )
+        val profiles = List(2) { async { repository.currentProfile() } }.awaitAll()
+        assertEquals(listOf("me", "me"), profiles.map { it.id })
+        assertEquals(1, server.requestCount)
+        assertEquals("Bird", repository.currentProfileState.value.profile?.displayName)
+        server.enqueue(MockResponse().setResponseCode(503))
+        try {
+            repository.currentProfile(refresh = true)
+            fail("Expected refresh failure")
+        } catch (_: ApiException) {
+            assertEquals(true, repository.currentProfileState.value.hasFailed)
+            assertEquals(false, repository.currentProfileState.value.isLoading)
+            assertEquals("Bird", repository.currentProfileState.value.profile?.displayName)
+        }
+        server.enqueue(
+            MockResponse().setBody("""{"id":"me","username":"bird","displayName":"Updated"}"""),
+        )
+        repository.currentProfile(refresh = true)
+        assertEquals("Updated", repository.currentProfileState.value.profile?.displayName)
+        assertEquals(false, repository.currentProfileState.value.hasFailed)
     }
 }

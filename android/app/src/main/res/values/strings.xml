@@ -19,4 +19,21 @@
   <string name="configuration_error">Add your Chirpy API key to chirpy.properties and rebuild.</string>
   <string name="handle">@%1$s</string>
   <string name="just_now">Just now</string>
+    <string name="search">Search</string>
+    <string name="profile">Profile</string>
+    <string name="search_posts">Search posts</string>
+    <string name="search_prompt">Find posts from the flock.</string>
+    <string name="new_post">New post</string>
+    <string name="post_detail">Post</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="publish">Post</string>
+    <string name="post_text">Post text</string>
+    <string name="post_prompt">What’s on your mind?</string>
+    <string name="character_count">Characters: %1$d/%2$d</string>
+    <string name="post_failed">Couldn’t post. Your draft is still here. Please try again.</string>
+    <string name="mutation_failed">Couldn’t update this post. Please try again.</string>
+    <string name="retry_profile">Retry loading profile</string>
+    <string name="delete_post">Delete post</string>
+    <string name="delete_confirmation">Delete this post? This cannot be undone.</string>
 </resources>

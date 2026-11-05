@@ -1,6 +1,6 @@
 # Chirpy
 
-Chirpy is a native iOS social-feed demo where birds post about life in the flock. It is a sandbox for SwiftUI,
+Chirpy is a native iOS and Android social-feed demo where birds post about life in the flock. It is a sandbox for SwiftUI,
 concurrency, networking, pagination, and testing.
 
 <p align="center">
@@ -13,6 +13,8 @@ concurrency, networking, pagination, and testing.
 - View the current profile and its posts
 - Load more posts as you scroll
 - Open a post to see its full text, image, and timestamp
+- Search posts with cursor pagination
+- Delete posts owned by the current profile
 - Create text-only posts
 - Like and unlike posts
 - Refresh with pull-to-refresh
@@ -30,7 +32,7 @@ The Search tab supports [paginated post search](https://github.com/samyanez94/Ch
 - Swift Testing and Deno tests
 
 The iOS project targets iOS 26.5 or later. Both clients share the backend in this repository.
-The Android client is under development; its first slice implements the Home feed.
+The Android client implements the same Home, Search, Profile, post detail, composition, and deletion flows.
 
 ## Repository Structure
 
