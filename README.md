@@ -1,8 +1,6 @@
 # Chirpy
 
-A little social network for the flock. Chirpy is a native **iOS and Android** demo where birds share updates, collect likes, and occasionally find a bagel.
-
-Built with **SwiftUI** on iOS and **Kotlin + Jetpack Compose** on Android, both apps share a Supabase backend. It’s a small, hands-on project for exploring native app development.
+Chirpy is a little social network where birds share updates, collect likes, and occasionally find a bagel. On both iOS and Android, you join the flock as Pip Sparrow (`@crumbclub`), the shared demo profile.
 
 <table>
   <tr>
@@ -15,55 +13,19 @@ Built with **SwiftUI** on iOS and **Kotlin + Jetpack Compose** on Android, both 
   </tr>
 </table>
 
-## Meet the flock
+Browse the flock’s photos, search posts for your favorite crumbs, or pull to refresh the feed. As Pip, you can like a post, write a text update, and delete your own posts.
 
-- Browse bird posts and photos, with more loading as you scroll.
-- Search posts, explore the demo profile, and open posts for a closer look.
-- Like your favorites, write a text post, or delete one of your own.
-- Pull to refresh and catch up on the latest chatter.
+The iOS app uses SwiftUI, and the Android app uses Kotlin and Jetpack Compose. Both connect to the same Supabase backend.
 
-Both apps use a **shared demo profile**—there’s no sign-up or individual account.
+## Try Chirpy
 
-## Getting started
+To run either app, you’ll need the Chirpy API key for the backend you’re using. The Wiki covers setup for each platform.
 
-Clone the repository, then choose your platform:
+- [Run on Android](https://github.com/samyanez94/Chirpy/wiki/Development#run-android)
+- [Run on iOS](https://github.com/samyanez94/Chirpy/wiki/Development#run-ios)
 
-```sh
-git clone https://github.com/samyanez94/Chirpy.git
-```
+For a closer look at the features, how the clients handle feed updates, or how to run your own backend, visit the [Chirpy Wiki](https://github.com/samyanez94/Chirpy/wiki).
 
-Both apps connect to the hosted demo backend by default. You’ll need its configured Chirpy API key, or you can [run your own backend](https://github.com/samyanez94/Chirpy/wiki/Backend#run-the-backend-locally).
+## License
 
-Use the dedicated Chirpy key, never a Supabase service-role key. Local key files are Git-ignored; the key is bundled into your app build.
-
-### iOS
-
-You’ll need **Xcode with support for iOS 26.5 or later** and an iPhone simulator or device.
-
-1. Copy the configuration template:
-   ```sh
-   cp ios/Configuration/LocalConfiguration.example.plist ios/Chirpy/LocalConfiguration.plist
-   ```
-2. Set `ChirpyAPIKey` in the copied file to your backend’s Chirpy API key.
-3. Open `ios/Chirpy.xcodeproj`, select the **Chirpy** scheme and an iPhone simulator, then run.
-   For a physical device, configure signing in Xcode first.
-
-Using your own backend? Update `baseURL` in [AppConfiguration.swift](ios/Chirpy/AppConfiguration.swift).
-
-### Android
-
-You’ll need **Android Studio**, **Android SDK Platform 37.0**, and **Build Tools 36.0.0**. Run on an emulator or device with **Android 8.0 (API 26) or later**.
-
-1. Copy the configuration template:
-   ```sh
-   cp android/chirpy.properties.example android/chirpy.properties
-   ```
-2. Set `CHIRPY_API_KEY` in the copied file. Set `CHIRPY_BASE_URL` too if you’re using your own backend.
-3. Open the `android/` directory in Android Studio, sync Gradle, and run the **app** configuration.
-
-See the [Wiki development guide](https://github.com/samyanez94/Chirpy/wiki/Development#run-android) for Java requirements, local backend settings, and test commands.
-
-## Learn more
-
-Visit the [Chirpy Wiki](https://github.com/samyanez94/Chirpy/wiki) for app background, architecture, and backend documentation. For local test commands and CI details, see the
-[Wiki development guide](https://github.com/samyanez94/Chirpy/wiki/Development).
+Chirpy is licensed under the [MIT License](LICENSE).
