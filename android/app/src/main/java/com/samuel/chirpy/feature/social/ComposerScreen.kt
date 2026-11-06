@@ -10,6 +10,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -18,6 +20,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.samuel.chirpy.R
@@ -34,8 +37,8 @@ internal fun ComposerScreen(
         TopAppBar(
             title = { Text(stringResource(R.string.new_post)) },
             navigationIcon = {
-                TextButton(onClick = onClose, enabled = !state.isPosting) {
-                    Text(stringResource(R.string.cancel))
+                IconButton(onClick = onClose, enabled = !state.isPosting) {
+                    Icon(painterResource(R.drawable.ic_close), stringResource(R.string.close))
                 }
             },
             actions = {

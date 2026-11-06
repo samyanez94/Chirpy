@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -53,7 +54,10 @@ class SocialNavigationTest {
             compose.onAllNodes(hasText("Hello flock")).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Hello flock").performClick()
-        compose.onNodeWithText("Back").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").assertIsDisplayed().performClick()
+        compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
+        compose.onNodeWithText("flock").assertIsDisplayed()
+        compose.onNodeWithText("Hello flock").performClick()
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
         compose.onNodeWithText("flock").assertIsDisplayed()
@@ -64,7 +68,11 @@ class SocialNavigationTest {
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
         compose.onNodeWithText("New post").performClick()
         compose.onNodeWithText("Draft survives back").assertIsDisplayed()
-        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithContentDescription("Close").assertIsDisplayed().performClick()
+        compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
+        compose.onNodeWithText("New post").performClick()
+        compose.onNodeWithText("Draft survives back").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close").performClick()
         pressBack()
         compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
     }
