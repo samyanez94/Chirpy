@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
@@ -45,6 +46,15 @@ class SocialNavigationTest {
         compose.waitForIdle()
     }
 
+    private fun openComposer() {
+        val newPostButton = hasContentDescription("New post") and hasClickAction()
+        // Returning to a tab can expose its selection before the FAB semantics are ready.
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(newPostButton).fetchSemanticsNodes().size == 1
+        }
+        compose.onNode(newPostButton).assertIsDisplayed().performClick()
+    }
+
     @Test fun detailAndComposerReturnToSearchAndKeepDraft() {
         showApp()
         compose.onNode(hasText("Search") and isSelectable()).performClick()
@@ -54,25 +64,32 @@ class SocialNavigationTest {
             compose.onAllNodes(hasText("Hello flock")).fetchSemanticsNodes().isNotEmpty()
         }
         compose.onNodeWithText("Hello flock").performClick()
-        compose.onNodeWithText("Back").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Back").assertIsDisplayed().performClick()
+        compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
+        compose.onNodeWithText("flock").assertIsDisplayed()
+        compose.onNodeWithText("Hello flock").performClick()
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
         compose.onNodeWithText("flock").assertIsDisplayed()
-        compose.onNodeWithContentDescription("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Post text").performTextInput("Draft survives back")
         closeSoftKeyboard()
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
-        compose.onNodeWithContentDescription("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Draft survives back").assertIsDisplayed()
-        compose.onNodeWithText("Cancel").performClick()
+        compose.onNodeWithContentDescription("Close").assertIsDisplayed().performClick()
+        compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
+        openComposer()
+        compose.onNodeWithText("Draft survives back").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Close").performClick()
         pressBack()
         compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
     }
 
     @Test fun publishAndDeleteReturnToTimeline() {
         showApp()
-        compose.onNodeWithContentDescription("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Post text").performTextInput("New chirp")
         closeSoftKeyboard()
         compose.onNodeWithText("Post").performClick()
