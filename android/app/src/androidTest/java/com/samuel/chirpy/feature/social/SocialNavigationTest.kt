@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
@@ -57,12 +58,12 @@ class SocialNavigationTest {
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
         compose.onNodeWithText("flock").assertIsDisplayed()
-        compose.onNodeWithText("New post").performClick()
+        compose.onNodeWithContentDescription("New post").performClick()
         compose.onNodeWithText("Post text").performTextInput("Draft survives back")
         closeSoftKeyboard()
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
-        compose.onNodeWithText("New post").performClick()
+        compose.onNodeWithContentDescription("New post").performClick()
         compose.onNodeWithText("Draft survives back").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         pressBack()
@@ -71,17 +72,17 @@ class SocialNavigationTest {
 
     @Test fun publishAndDeleteReturnToTimeline() {
         showApp()
-        compose.onNodeWithText("New post").performClick()
+        compose.onNodeWithContentDescription("New post").performClick()
         compose.onNodeWithText("Post text").performTextInput("New chirp")
         closeSoftKeyboard()
         compose.onNodeWithText("Post").performClick()
-        compose.onNodeWithText("New post").assertIsDisplayed()
+        compose.onNodeWithContentDescription("New post").assertIsDisplayed()
         compose.onNodeWithText("Hello flock").performClick()
         compose.onNodeWithText("Delete post").performClick()
         compose.onNodeWithText("Delete this post? This cannot be undone.").assertIsDisplayed()
         compose.onNode(
             hasText("Delete post") and hasClickAction() and hasAnyAncestor(isDialog()),
         ).performClick()
-        compose.onNodeWithText("New post").assertIsDisplayed()
+        compose.onNodeWithContentDescription("New post").assertIsDisplayed()
     }
 }
