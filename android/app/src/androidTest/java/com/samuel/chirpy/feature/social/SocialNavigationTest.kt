@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
@@ -46,7 +47,7 @@ class SocialNavigationTest {
     }
 
     private fun openComposer() {
-        val newPostButton = hasText("New post") and hasClickAction()
+        val newPostButton = hasContentDescription("New post") and hasClickAction()
         // Returning to a tab can expose its selection before the FAB semantics are ready.
         compose.waitUntil(5_000) {
             compose.onAllNodes(newPostButton).fetchSemanticsNodes().size == 1
@@ -92,13 +93,13 @@ class SocialNavigationTest {
         compose.onNodeWithText("Post text").performTextInput("New chirp")
         closeSoftKeyboard()
         compose.onNodeWithText("Post").performClick()
-        compose.onNodeWithText("New post").assertIsDisplayed()
+        compose.onNodeWithContentDescription("New post").assertIsDisplayed()
         compose.onNodeWithText("Hello flock").performClick()
         compose.onNodeWithText("Delete post").performClick()
         compose.onNodeWithText("Delete this post? This cannot be undone.").assertIsDisplayed()
         compose.onNode(
             hasText("Delete post") and hasClickAction() and hasAnyAncestor(isDialog()),
         ).performClick()
-        compose.onNodeWithText("New post").assertIsDisplayed()
+        compose.onNodeWithContentDescription("New post").assertIsDisplayed()
     }
 }
