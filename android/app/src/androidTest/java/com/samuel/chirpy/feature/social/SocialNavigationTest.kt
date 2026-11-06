@@ -45,6 +45,15 @@ class SocialNavigationTest {
         compose.waitForIdle()
     }
 
+    private fun openComposer() {
+        val newPostButton = hasText("New post") and hasClickAction()
+        // Returning to a tab can expose its selection before the FAB semantics are ready.
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(newPostButton).fetchSemanticsNodes().size == 1
+        }
+        compose.onNode(newPostButton).assertIsDisplayed().performClick()
+    }
+
     @Test fun detailAndComposerReturnToSearchAndKeepDraft() {
         showApp()
         compose.onNode(hasText("Search") and isSelectable()).performClick()
@@ -61,16 +70,16 @@ class SocialNavigationTest {
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
         compose.onNodeWithText("flock").assertIsDisplayed()
-        compose.onNodeWithText("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Post text").performTextInput("Draft survives back")
         closeSoftKeyboard()
         pressBack()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
-        compose.onNodeWithText("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Draft survives back").assertIsDisplayed()
         compose.onNodeWithContentDescription("Close").assertIsDisplayed().performClick()
         compose.onNode(hasText("Search") and isSelectable()).assertIsSelected()
-        compose.onNodeWithText("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Draft survives back").assertIsDisplayed()
         compose.onNodeWithContentDescription("Close").performClick()
         pressBack()
@@ -79,7 +88,7 @@ class SocialNavigationTest {
 
     @Test fun publishAndDeleteReturnToTimeline() {
         showApp()
-        compose.onNodeWithText("New post").performClick()
+        openComposer()
         compose.onNodeWithText("Post text").performTextInput("New chirp")
         closeSoftKeyboard()
         compose.onNodeWithText("Post").performClick()
