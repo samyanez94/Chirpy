@@ -44,6 +44,7 @@ fun PostRow(
     onLike: () -> Unit,
     formatDate: (Instant) -> String,
     modifier: Modifier = Modifier,
+    dateBelowContent: Boolean = false,
 ) {
     Row(
         modifier.padding(horizontal = 20.dp, vertical = 16.dp),
@@ -86,13 +87,19 @@ fun PostRow(
                     },
                     modifier = Modifier.padding(end = 8.dp).alignByBaseline(),
                 )
-                RelativePostDate(post.createdAt, formatDate, Modifier.alignByBaseline())
+                if (!dateBelowContent) {
+                    RelativePostDate(post.createdAt, formatDate, Modifier.alignByBaseline())
+                }
             }
             Spacer(Modifier.size(8.dp))
             Text(post.text, style = MaterialTheme.typography.bodyLarge)
             post.imageUrl?.let {
                 Spacer(Modifier.size(8.dp))
                 PostImage(it, post.author.displayName)
+            }
+            if (dateBelowContent) {
+                Spacer(Modifier.size(16.dp))
+                RelativePostDate(post.createdAt, formatDate)
             }
             val action = stringResource(if (post.isLiked) R.string.unlike else R.string.like)
             val count = pluralStringResource(R.plurals.likes_count, post.likeCount, post.likeCount)

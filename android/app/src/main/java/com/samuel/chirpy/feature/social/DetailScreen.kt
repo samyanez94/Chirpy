@@ -64,7 +64,7 @@ internal fun DetailScreen(
                     DateTimeFormatter.ofLocalizedDateTime(
                         FormatStyle.MEDIUM,
                     ).withZone(ZoneId.systemDefault()).format(instant)
-                })
+                }, dateBelowContent = true)
             }
             if (state.hasFailed) {
                 Text(
