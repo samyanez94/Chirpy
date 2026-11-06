@@ -111,7 +111,7 @@ fun PostRow(
                         if (post.isLiked) R.drawable.ic_heart else R.drawable.ic_heart_outline,
                     ),
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(24.dp),
                     tint =
                     if (post.isLiked) {
                         MaterialTheme.colorScheme.error
