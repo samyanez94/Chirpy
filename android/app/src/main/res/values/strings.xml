@@ -6,7 +6,6 @@
   <string name="retry">Try again</string>
   <string name="empty_title">It’s quiet here</string>
   <string name="empty_message">Posts from the flock will appear here.</string>
-  <string name="refresh">Refresh feed</string>
   <string name="refresh_error">Couldn’t refresh. Your feed is still here.</string>
   <string name="pagination_error">More posts couldn’t be loaded.</string>
   <string name="loading_more">Loading more posts</string>

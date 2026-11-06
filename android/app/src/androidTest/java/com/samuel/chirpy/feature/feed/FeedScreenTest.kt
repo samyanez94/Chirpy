@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
@@ -13,6 +14,8 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.test.platform.app.InstrumentationRegistry
 import com.samuel.chirpy.R
 import com.samuel.chirpy.core.model.Post
@@ -78,7 +81,7 @@ class FeedScreenTest {
     }
 
     @Test
-    fun emptyFeedHasRefreshAction() {
+    fun emptyFeedSupportsPullToRefresh() {
         var refreshes = 0
         compose.setContent {
             ChirpyTheme {
@@ -92,7 +95,8 @@ class FeedScreenTest {
             }
         }
         compose.onNodeWithText(context.getString(R.string.empty_title)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(context.getString(R.string.refresh)).performClick()
+        compose.onNode(hasScrollAction()).performTouchInput { swipeDown() }
+        compose.waitForIdle()
         assertEquals(1, refreshes)
     }
 
