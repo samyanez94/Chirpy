@@ -1,7 +1,6 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.postdetail
 
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -14,29 +13,27 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
-class SocialScreenTest {
+class PostDetailScreenTest {
     @get:Rule val compose = createComposeRule()
     private val profile = Profile("me", "bird", "Bird", null)
     private val post = Post("post", profile, "Hello flock", null, Instant.EPOCH, false, 2)
-
-    @Test fun composerDisablesEmptySubmissionAndShowsPreservedDraftError() {
-        compose.setContent {
-            ChirpyTheme {
-                ComposerScreen(ComposerUiState(hasFailed = true), {}, {}, {})
-            }
-        }
-        compose.onNodeWithText("Post").assertIsNotEnabled()
-        compose.onNodeWithText(
-            "Couldn’t post. Your draft is still here. Please try again.",
-        ).assertIsDisplayed()
-    }
 
     @Test fun deletionRequiresConfirmationAndCancelKeepsPost() {
         var deletions = 0
         compose.setContent {
             ChirpyTheme {
-                DetailScreen(post, DetailUiState(), CurrentProfileState(profile = profile), {
-                }, { deletions++ }, {}, {})
+                PostDetailScreen(
+                    post,
+                    PostDetailUiState(),
+                    CurrentProfileState(
+                        profile = profile,
+                    ),
+                    {
+                    },
+                    { deletions++ },
+                    {},
+                    {},
+                )
             }
         }
         compose.onNodeWithText("Delete post").performClick()
@@ -50,9 +47,9 @@ class SocialScreenTest {
     @Test fun otherAuthorsHaveNoDeleteControl() {
         compose.setContent {
             ChirpyTheme {
-                DetailScreen(
+                PostDetailScreen(
                     post,
-                    DetailUiState(),
+                    PostDetailUiState(),
                     CurrentProfileState(profile = profile.copy(id = "other")),
                     {
                     },

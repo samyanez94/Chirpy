@@ -1,5 +1,7 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.app
 
+import com.samuel.chirpy.feature.postcomposer.PostDraft
+import com.samuel.chirpy.testing.FakeSocialRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,11 +35,11 @@ class SocialViewModelTest {
     @Test fun backStackKeepsTimelineAndNeverPopsItsRoot() = runTest(dispatcher) {
         val model = SocialViewModel(repository)
         model.close()
-        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+        assertEquals(listOf(AppDestination.Timeline), model.state.value.backStack)
         model.compose()
         model.compose()
         assertEquals(
-            listOf(SocialDestination.Timeline, SocialDestination.Composer),
+            listOf(AppDestination.Timeline, AppDestination.Composer),
             model.state.value.backStack,
         )
         model.editDraft("Keep my draft")
@@ -50,16 +52,16 @@ class SocialViewModelTest {
         model.toggleLike()
         advanceUntilIdle()
         assertEquals(detailStack, model.state.value.backStack)
-        assertEquals(SocialDestination.Detail("post"), detailStack.last())
+        assertEquals(AppDestination.Detail("post"), detailStack.last())
         assertTrue(model.state.value.selectedPost!!.isLiked)
         model.close()
         model.close()
-        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+        assertEquals(listOf(AppDestination.Timeline), model.state.value.backStack)
         repository.pendingPostIds.value = setOf("post")
         advanceUntilIdle()
         model.compose()
         model.close()
-        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+        assertEquals(listOf(AppDestination.Timeline), model.state.value.backStack)
     }
 
     @Test fun pendingDetailMutationBlocksBackUntilCompletion() = runTest(dispatcher) {
@@ -72,11 +74,11 @@ class SocialViewModelTest {
         model.openPost(repository.post("post"))
         model.toggleLike()
         model.close()
-        assertEquals(SocialDestination.Detail("post"), model.state.value.destination)
+        assertEquals(AppDestination.Detail("post"), model.state.value.destination)
         response.complete(Unit)
         advanceUntilIdle()
         model.close()
-        assertEquals(listOf(SocialDestination.Timeline), model.state.value.backStack)
+        assertEquals(listOf(AppDestination.Timeline), model.state.value.backStack)
     }
 
     @Test fun draftValidationMatchesServerUnicodeRules() {
@@ -94,7 +96,7 @@ class SocialViewModelTest {
         repository.create = { throw IOException() }
         model.publish()
         advanceUntilIdle()
-        assertEquals(SocialDestination.Composer, model.state.value.destination)
+        assertEquals(AppDestination.Composer, model.state.value.destination)
         assertEquals("  Hello 🐦 \uFEFF", model.state.value.composer.draft)
         assertTrue(model.state.value.composer.hasFailed)
         repository.create = { text ->
@@ -103,7 +105,7 @@ class SocialViewModelTest {
         }
         model.publish()
         advanceUntilIdle()
-        assertEquals(SocialDestination.Timeline, model.state.value.destination)
+        assertEquals(AppDestination.Timeline, model.state.value.destination)
         assertEquals("", model.state.value.composer.draft)
     }
 
@@ -124,7 +126,7 @@ class SocialViewModelTest {
         model.editDraft("Replacement")
         runCurrent()
         assertEquals(1, calls)
-        assertEquals(SocialDestination.Composer, model.state.value.destination)
+        assertEquals(AppDestination.Composer, model.state.value.destination)
         assertEquals("A new chirp", model.state.value.composer.draft)
         response.complete(Unit)
         advanceUntilIdle()
@@ -152,7 +154,7 @@ class SocialViewModelTest {
         repository.delete = {}
         model.delete()
         advanceUntilIdle()
-        assertEquals(SocialDestination.Timeline, model.state.value.destination)
+        assertEquals(AppDestination.Timeline, model.state.value.destination)
     }
 
     @Test fun detailLikeFailureLeavesCountAndAllowsRetry() = runTest(dispatcher) {

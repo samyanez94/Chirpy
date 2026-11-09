@@ -8,7 +8,7 @@ import com.samuel.chirpy.core.model.FeedPage
 import com.samuel.chirpy.core.model.LikeUpdate
 import com.samuel.chirpy.core.model.Post
 import com.samuel.chirpy.core.model.Profile
-import com.samuel.chirpy.feature.social.FakeSocialRepository
+import com.samuel.chirpy.testing.FakeSocialRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

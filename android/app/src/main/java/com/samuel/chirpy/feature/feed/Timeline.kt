@@ -1,9 +1,7 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.feed
 
 import androidx.compose.runtime.Composable
 import com.samuel.chirpy.core.model.Post
-import com.samuel.chirpy.feature.feed.FeedScreen
-import com.samuel.chirpy.feature.feed.FeedUiState
 
 @Composable
 internal fun Timeline(

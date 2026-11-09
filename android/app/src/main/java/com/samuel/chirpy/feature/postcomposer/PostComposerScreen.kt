@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.postcomposer
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -27,8 +27,8 @@ import com.samuel.chirpy.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ComposerScreen(
-    state: ComposerUiState,
+internal fun PostComposerScreen(
+    state: PostComposerUiState,
     onEdit: (String) -> Unit,
     onPublish: () -> Unit,
     onClose: () -> Unit,

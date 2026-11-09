@@ -1,6 +1,6 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.postdetail
 
-data class DetailUiState(
+data class PostDetailUiState(
     val isLiking: Boolean = false,
     val isDeleting: Boolean = false,
     val hasFailed: Boolean = false,

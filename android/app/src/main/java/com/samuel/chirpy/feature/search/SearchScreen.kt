@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.search
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth

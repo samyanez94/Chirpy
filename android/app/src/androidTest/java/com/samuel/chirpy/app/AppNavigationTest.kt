@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.app
 
 import androidx.activity.OnBackPressedDispatcher
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
@@ -21,7 +21,7 @@ import com.samuel.chirpy.core.ui.ChirpyTheme
 import org.junit.Rule
 import org.junit.Test
 
-class SocialNavigationTest {
+class AppNavigationTest {
     @get:Rule val compose = createComposeRule()
     private lateinit var backDispatcher: OnBackPressedDispatcher
     private var keyboard: SoftwareKeyboardController? = null
@@ -32,7 +32,7 @@ class SocialNavigationTest {
             backDispatcher = checkNotNull(LocalOnBackPressedDispatcherOwner.current)
                 .onBackPressedDispatcher
             keyboard = LocalSoftwareKeyboardController.current
-            ChirpyTheme { SocialRoute(repository) }
+            ChirpyTheme { ChirpyAppRoot(repository) }
         }
     }
 
@@ -85,6 +85,19 @@ class SocialNavigationTest {
         compose.onNodeWithContentDescription("Close").performClick()
         pressBack()
         compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
+    }
+
+    @Test fun publishingFromSearchAndProfileReturnsToTheOriginatingTab() {
+        showApp()
+        for (tab in listOf("Search", "Profile")) {
+            val tabItem = compose.onNode(hasText(tab) and isSelectable())
+            tabItem.performClick()
+            openComposer()
+            compose.onNodeWithText("Post text").performTextInput("Posting from $tab")
+            closeSoftKeyboard()
+            compose.onNodeWithText("Post").performClick()
+            tabItem.assertIsSelected()
+        }
     }
 
     @Test fun publishAndDeleteReturnToTimeline() {

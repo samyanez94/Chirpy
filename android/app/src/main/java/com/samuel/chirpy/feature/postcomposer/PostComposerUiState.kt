@@ -1,6 +1,6 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.postcomposer
 
-data class ComposerUiState(
+data class PostComposerUiState(
     val draft: String = "",
     val isPosting: Boolean = false,
     val hasFailed: Boolean = false,

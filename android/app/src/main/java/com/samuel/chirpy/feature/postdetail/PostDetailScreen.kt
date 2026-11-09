@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.postdetail
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,9 +33,9 @@ import java.time.format.FormatStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun DetailScreen(
+internal fun PostDetailScreen(
     post: Post,
-    state: DetailUiState,
+    state: PostDetailUiState,
     profile: CurrentProfileState,
     onLike: () -> Unit,
     onDelete: () -> Unit,

@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.profile
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

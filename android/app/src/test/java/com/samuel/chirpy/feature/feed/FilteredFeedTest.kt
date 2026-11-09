@@ -1,10 +1,9 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.feed
 
 import com.samuel.chirpy.core.data.PostChange
 import com.samuel.chirpy.core.model.FeedPage
 import com.samuel.chirpy.core.model.LikeUpdate
-import com.samuel.chirpy.feature.feed.FeedMode
-import com.samuel.chirpy.feature.feed.FeedViewModel
+import com.samuel.chirpy.testing.FakeSocialRepository
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi

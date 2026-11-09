@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.app
 
 import com.samuel.chirpy.core.data.CurrentProfileState
 import com.samuel.chirpy.core.data.PostChange

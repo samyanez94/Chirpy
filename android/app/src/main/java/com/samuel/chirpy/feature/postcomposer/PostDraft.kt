@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.feature.postcomposer
 
 // Match ECMAScript trim and count Unicode code points, as the shared API does.
 object PostDraft {

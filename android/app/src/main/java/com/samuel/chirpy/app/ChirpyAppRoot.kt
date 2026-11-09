@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.social
+package com.samuel.chirpy.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
@@ -37,10 +37,15 @@ import com.samuel.chirpy.R
 import com.samuel.chirpy.core.data.SocialRepository
 import com.samuel.chirpy.feature.feed.FeedMode
 import com.samuel.chirpy.feature.feed.FeedViewModel
+import com.samuel.chirpy.feature.feed.Timeline
+import com.samuel.chirpy.feature.postcomposer.PostComposerScreen
+import com.samuel.chirpy.feature.postdetail.PostDetailScreen
+import com.samuel.chirpy.feature.profile.ProfileScreen
+import com.samuel.chirpy.feature.search.SearchScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SocialRoute(repository: SocialRepository) {
+fun ChirpyAppRoot(repository: SocialRepository) {
     val social: SocialViewModel = viewModel(
         factory = viewModelFactory {
             initializer { SocialViewModel(repository) }
@@ -74,7 +79,7 @@ fun SocialRoute(repository: SocialRepository) {
             onPost = social::openPost,
         )
     }
-    BackHandler(state.destination == SocialDestination.Timeline && tab != FeedMode.Home) {
+    BackHandler(state.destination == AppDestination.Timeline && tab != FeedMode.Home) {
         tab = FeedMode.Home
     }
     NavDisplay(
@@ -82,17 +87,17 @@ fun SocialRoute(repository: SocialRepository) {
         onBack = social::close,
         entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
         entryProvider = entryProvider {
-            entry<SocialDestination.Composer> {
-                ComposerScreen(
+            entry<AppDestination.Composer> {
+                PostComposerScreen(
                     state.composer,
                     social::editDraft,
                     social::publish,
                     social::close,
                 )
             }
-            entry<SocialDestination.Detail> { destination ->
+            entry<AppDestination.Detail> { destination ->
                 state.selectedPost?.takeIf { it.id == destination.postId }?.let { post ->
-                    DetailScreen(
+                    PostDetailScreen(
                         post,
                         state.detail,
                         state.profile,
@@ -103,7 +108,7 @@ fun SocialRoute(repository: SocialRepository) {
                     )
                 }
             }
-            entry<SocialDestination.Timeline> {
+            entry<AppDestination.Timeline> {
                 Scaffold(
                     topBar = {
                         TopAppBar(title = { Text(stringResource(tab.titleResource())) })
@@ -163,7 +168,7 @@ fun SocialRoute(repository: SocialRepository) {
     )
     // Consume Back while a mutation is active, including before a predictive pop starts.
     BackHandler(
-        state.destination != SocialDestination.Timeline &&
+        state.destination != AppDestination.Timeline &&
             (state.composer.isPosting || state.detail.isBusy),
     ) {}
 }
