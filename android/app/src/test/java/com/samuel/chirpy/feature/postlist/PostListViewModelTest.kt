@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.feed
+package com.samuel.chirpy.feature.postlist
 
 import com.samuel.chirpy.core.data.ApiException
 import com.samuel.chirpy.core.data.MissingApiKeyException
@@ -31,7 +31,7 @@ import java.io.IOException
 import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class FeedViewModelTest {
+class PostListViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = FakeRepository()
 
@@ -51,7 +51,7 @@ class FeedViewModelTest {
             assertEquals(20, limit)
             FeedPage(listOf(post("one"), post("one")), "next")
         }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         assertEquals(listOf("one"), model.state.value.posts.map { it.id })
         assertEquals("next", model.state.value.nextCursor)
@@ -61,7 +61,7 @@ class FeedViewModelTest {
     @Test
     fun paginationDeduplicatesAndSuppressesOverlappingRequests() = runTest(dispatcher) {
         repository.page = { _, _ -> FeedPage(listOf(post("one")), "next") }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         val response = CompletableDeferred<FeedPage>()
         repository.page = { cursor, _ ->
@@ -81,7 +81,7 @@ class FeedViewModelTest {
     @Test
     fun refreshDiscardsLatePaginationEvenIfTransportIgnoresCancellation() = runTest(dispatcher) {
         repository.page = { _, _ -> FeedPage(listOf(post("old")), "next") }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         val oldResponse = CompletableDeferred<FeedPage>()
         repository.page = { cursor, _ ->
@@ -102,13 +102,13 @@ class FeedViewModelTest {
 
     @Test
     fun refreshFailureRetainsContent() = runTest(dispatcher) {
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         repository.page = { _, _ -> throw IOException() }
         model.refresh()
         advanceUntilIdle()
         assertEquals(1, model.state.value.posts.size)
-        assertEquals(FeedMessage.RefreshFailed, model.state.value.message?.kind)
+        assertEquals(PostListMessage.RefreshFailed, model.state.value.message?.kind)
         assertNull(model.state.value.initialError)
         assertFalse(model.state.value.isRefreshing)
     }
@@ -116,9 +116,9 @@ class FeedViewModelTest {
     @Test
     fun initialFailureCanBeRetried() = runTest(dispatcher) {
         repository.page = { _, _ -> throw IOException() }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
-        assertEquals(FeedMessage.LoadFailed, model.state.value.initialError)
+        assertEquals(PostListMessage.LoadFailed, model.state.value.initialError)
         repository.page = { _, _ -> FeedPage(emptyList(), null) }
         model.refresh()
         advanceUntilIdle()
@@ -129,15 +129,15 @@ class FeedViewModelTest {
     @Test
     fun missingKeyHasActionableConfigurationState() = runTest(dispatcher) {
         repository.page = { _, _ -> throw MissingApiKeyException() }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
-        assertEquals(FeedMessage.MissingConfiguration, model.state.value.initialError)
+        assertEquals(PostListMessage.MissingConfiguration, model.state.value.initialError)
     }
 
     @Test
     fun paginationFailureRetainsCursorForRetry() = runTest(dispatcher) {
         repository.page = { _, _ -> FeedPage(listOf(post("one")), "next") }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         repository.page = { _, _ -> throw IOException() }
         model.loadMore()
@@ -154,7 +154,7 @@ class FeedViewModelTest {
     @Test
     fun invalidCursorRestartsFromFirstPage() = runTest(dispatcher) {
         repository.page = { _, _ -> FeedPage(listOf(post("one")), "invalid") }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         repository.page = { cursor, _ ->
             if (cursor != null) throw ApiException("invalid_cursor", 400, null)
@@ -168,7 +168,7 @@ class FeedViewModelTest {
     @Test
     fun repeatedCursorStopsAutomaticPagination() = runTest(dispatcher) {
         repository.page = { _, _ -> FeedPage(listOf(post("one")), "same") }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         model.loadMore()
         advanceUntilIdle()
@@ -178,7 +178,7 @@ class FeedViewModelTest {
 
     @Test
     fun likesUseServerResultAndSuppressDuplicateActions() = runTest(dispatcher) {
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         val response = CompletableDeferred<LikeUpdate>()
         repository.like = { _, liked ->
@@ -199,20 +199,20 @@ class FeedViewModelTest {
 
     @Test
     fun likeFailureKeepsPreviousValue() = runTest(dispatcher) {
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         repository.like = { _, _ -> throw IOException() }
         model.toggleLike("one")
         advanceUntilIdle()
         assertFalse(model.state.value.posts.single().isLiked)
-        assertEquals(FeedMessage.LikeFailed, model.state.value.message?.kind)
+        assertEquals(PostListMessage.LikeFailed, model.state.value.message?.kind)
         assertTrue(model.state.value.pendingLikes.isEmpty())
     }
 
     @Test
     fun lateRefreshDoesNotOverwriteCompletedLike() = runTest(dispatcher) {
         repository.like = { id, liked -> LikeUpdate(id, liked, 42) }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         val response = CompletableDeferred<FeedPage>()
         repository.page = { _, _ -> response.await() }

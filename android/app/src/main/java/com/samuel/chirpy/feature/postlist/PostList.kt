@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.feed
+package com.samuel.chirpy.feature.postlist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,8 +55,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FeedScreen(
-    state: FeedUiState,
+fun PostList(
+    state: PostListUiState,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
     onLike: (String) -> Unit,
@@ -83,7 +83,7 @@ fun FeedScreen(
             }
         }
     }
-    FeedPaginationEffect(state, listState, onLoadMore)
+    PostListPaginationEffect(state, listState, onLoadMore)
     Scaffold(
         contentWindowInsets = if (showToolbar) {
             ScaffoldDefaults.contentWindowInsets
@@ -118,7 +118,7 @@ fun FeedScreen(
                 state.isLoading -> LoadingState(Modifier.padding(padding))
 
                 state.initialError != null ->
-                    FeedStatus(
+                    PostListStatus(
                         stringResource(state.initialError.resourceId()),
                         null,
                         onRefresh,
@@ -128,7 +128,7 @@ fun FeedScreen(
                     )
 
                 state.posts.isEmpty() && state.nextCursor == null ->
-                    FeedStatus(
+                    PostListStatus(
                         stringResource(R.string.empty_title),
                         emptyMessage,
                         onRefresh,
@@ -155,7 +155,7 @@ fun FeedScreen(
                         }
                         if (state.paginationFailed) {
                             item(key = "pagination_error", contentType = "error") {
-                                FeedStatus(
+                                PostListStatus(
                                     stringResource(R.string.pagination_error),
                                     null,
                                     onLoadMore,
@@ -194,8 +194,8 @@ fun FeedScreen(
 }
 
 @Composable
-private fun FeedPaginationEffect(
-    state: FeedUiState,
+private fun PostListPaginationEffect(
+    state: PostListUiState,
     listState: LazyListState,
     onLoadMore: () -> Unit,
 ) {
@@ -241,7 +241,7 @@ private fun LoadingState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun FeedStatus(
+private fun PostListStatus(
     title: String,
     description: String?,
     onRetry: () -> Unit,
@@ -261,9 +261,9 @@ private fun FeedStatus(
     }
 }
 
-private fun FeedMessage.resourceId(): Int = when (this) {
-    FeedMessage.LoadFailed -> R.string.feed_error
-    FeedMessage.RefreshFailed -> R.string.refresh_error
-    FeedMessage.LikeFailed -> R.string.like_error
-    FeedMessage.MissingConfiguration -> R.string.configuration_error
+private fun PostListMessage.resourceId(): Int = when (this) {
+    PostListMessage.LoadFailed -> R.string.feed_error
+    PostListMessage.RefreshFailed -> R.string.refresh_error
+    PostListMessage.LikeFailed -> R.string.like_error
+    PostListMessage.MissingConfiguration -> R.string.configuration_error
 }

@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToIndexAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.isSelectable
@@ -16,7 +17,10 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTextInput
+import com.samuel.chirpy.core.data.SocialRepository
+import com.samuel.chirpy.core.model.FeedPage
 import com.samuel.chirpy.core.ui.ChirpyTheme
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
@@ -27,7 +31,7 @@ class AppNavigationTest {
     private lateinit var backDispatcher: OnBackPressedDispatcher
     private var keyboard: SoftwareKeyboardController? = null
 
-    private fun showApp(repository: NavigationTestRepository = NavigationTestRepository()) {
+    private fun showApp(repository: SocialRepository = NavigationTestRepository()) {
         compose.setContent {
             backDispatcher = checkNotNull(LocalOnBackPressedDispatcherOwner.current)
                 .onBackPressedDispatcher
@@ -85,6 +89,47 @@ class AppNavigationTest {
         compose.onNodeWithContentDescription("Close").performClick()
         pressBack()
         compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
+    }
+
+    @Test fun tabsKeepTheirOwnPostsScrollPositionAndSearchQuery() {
+        val base = NavigationTestRepository()
+        val repository = object : SocialRepository by base {
+            suspend fun page(label: String): FeedPage {
+                val post = base.fetchPage(null, 1).posts.single()
+                return FeedPage(
+                    List(20) {
+                        post.copy(id = "$label-$it", text = "$label $it")
+                    },
+                    null,
+                )
+            }
+
+            override suspend fun fetchPage(cursor: String?, limit: Int) = page("Home feed")
+            override suspend fun searchPosts(query: String, cursor: String?, limit: Int) =
+                page(query)
+            override suspend fun profilePosts(profileId: String, cursor: String?, limit: Int) =
+                page(profileId)
+        }
+        showApp(repository)
+        val list = compose.onNode(hasScrollToIndexAction())
+        list.performScrollToIndex(12)
+        compose.onNodeWithText("Home feed 12").assertIsDisplayed()
+        compose.onNode(hasText("Search") and isSelectable()).performClick()
+        compose.onNodeWithText("Search posts").performTextInput("crumb")
+        closeSoftKeyboard()
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasText("crumb 0")).fetchSemanticsNodes().isNotEmpty()
+        }
+        list.performScrollToIndex(10)
+        compose.onNode(hasText("Profile") and isSelectable()).performClick()
+        list.performScrollToIndex(14)
+        compose.onNode(hasText("Home") and isSelectable()).performClick()
+        compose.onNodeWithText("Home feed 12").assertIsDisplayed()
+        compose.onNode(hasText("Search") and isSelectable()).performClick()
+        compose.onNodeWithText("crumb").assertIsDisplayed()
+        compose.onNodeWithText("crumb 10").assertIsDisplayed()
+        compose.onNode(hasText("Profile") and isSelectable()).performClick()
+        compose.onNodeWithText("me 14").assertIsDisplayed()
     }
 
     @Test fun backWaitsForPublishAndDetailLikeToFinish() {

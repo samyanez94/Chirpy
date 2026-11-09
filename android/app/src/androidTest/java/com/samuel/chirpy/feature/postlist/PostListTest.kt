@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.feed
+package com.samuel.chirpy.feature.postlist
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,7 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 
-class FeedScreenTest {
+class PostListTest {
     @get:Rule val compose = createComposeRule()
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
@@ -35,8 +35,11 @@ class FeedScreenTest {
         var retries = 0
         compose.setContent {
             ChirpyTheme {
-                FeedScreen(
-                    state = FeedUiState(isLoading = false, initialError = FeedMessage.LoadFailed),
+                PostList(
+                    state = PostListUiState(
+                        isLoading = false,
+                        initialError = PostListMessage.LoadFailed,
+                    ),
                     onRefresh = { retries++ },
                     onLoadMore = {},
                     onLike = {},
@@ -64,8 +67,8 @@ class FeedScreenTest {
             )
         compose.setContent {
             ChirpyTheme {
-                FeedScreen(
-                    state = FeedUiState(posts = listOf(post), isLoading = false),
+                PostList(
+                    state = PostListUiState(posts = listOf(post), isLoading = false),
                     onRefresh = {},
                     onLoadMore = {},
                     onLike = { likedId = it },
@@ -85,8 +88,8 @@ class FeedScreenTest {
         var refreshes = 0
         compose.setContent {
             ChirpyTheme {
-                FeedScreen(
-                    state = FeedUiState(isLoading = false),
+                PostList(
+                    state = PostListUiState(isLoading = false),
                     onRefresh = { refreshes++ },
                     onLoadMore = {},
                     onLike = {},
@@ -103,7 +106,7 @@ class FeedScreenTest {
     @Test
     fun paginationContinuesAfterDuplicatePageAndWaitsForRetryAfterFailure() {
         var state by mutableStateOf(
-            FeedUiState(
+            PostListUiState(
                 posts = List(40) {
                     feedPost(it)
                 },
@@ -114,7 +117,7 @@ class FeedScreenTest {
         var requests = 0
         compose.setContent {
             ChirpyTheme {
-                FeedScreen(
+                PostList(
                     state = state,
                     onRefresh = {},
                     onLoadMore = {
@@ -145,10 +148,10 @@ class FeedScreenTest {
     @Test
     fun scrollPositionSurvivesStateRestoration() {
         val restoration = StateRestorationTester(compose)
-        val state = FeedUiState(posts = List(40) { feedPost(it) }, isLoading = false)
+        val state = PostListUiState(posts = List(40) { feedPost(it) }, isLoading = false)
         restoration.setContent {
             ChirpyTheme {
-                FeedScreen(
+                PostList(
                     state = state,
                     onRefresh = {},
                     onLoadMore = {},

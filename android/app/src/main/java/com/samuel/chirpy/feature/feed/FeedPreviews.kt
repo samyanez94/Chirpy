@@ -6,6 +6,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.samuel.chirpy.core.model.Post
 import com.samuel.chirpy.core.model.Profile
 import com.samuel.chirpy.core.ui.ChirpyTheme
+import com.samuel.chirpy.feature.postlist.PostList
+import com.samuel.chirpy.feature.postlist.PostListMessage
+import com.samuel.chirpy.feature.postlist.PostListUiState
 import java.time.Instant
 
 @Preview(name = "Home")
@@ -24,8 +27,8 @@ private fun HomePreview() {
             likeCount = 12,
         )
     ChirpyTheme {
-        FeedScreen(
-            state = FeedUiState(posts = listOf(post), isLoading = false),
+        PostList(
+            state = PostListUiState(posts = listOf(post), isLoading = false),
             onRefresh = {},
             onLoadMore = {},
             onLike = {},
@@ -38,8 +41,8 @@ private fun HomePreview() {
 @Composable
 private fun ErrorPreview() {
     ChirpyTheme {
-        FeedScreen(
-            state = FeedUiState(isLoading = false, initialError = FeedMessage.LoadFailed),
+        PostList(
+            state = PostListUiState(isLoading = false, initialError = PostListMessage.LoadFailed),
             onRefresh = {},
             onLoadMore = {},
             onLike = {},

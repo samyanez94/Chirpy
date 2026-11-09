@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.feed
+package com.samuel.chirpy.feature.postlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,15 +17,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class FeedViewModel(
+class PostListViewModel(
     private val repository: SocialRepository,
-    private val mode: FeedMode = FeedMode.Home,
+    private val source: PostListSource = PostListSource.HomeFeed,
 ) : ViewModel() {
     private var query = ""
     private val removedIds = mutableSetOf<String>()
     private val localPendingLikes = mutableSetOf<String>()
 
-    private val mutableState = MutableStateFlow(FeedUiState())
+    private val mutableState = MutableStateFlow(PostListUiState())
     val state = mutableState.asStateFlow()
 
     private var pageJob: Job? = null
@@ -61,7 +61,7 @@ class FeedViewModel(
                 }
             }
         }
-        if (mode != FeedMode.Search) {
+        if (source != PostListSource.SearchResults) {
             refresh()
         } else {
             mutableState.update { it.copy(isLoading = false) }
@@ -75,7 +75,7 @@ class FeedViewModel(
         ++generation
         pageJob?.cancel()
         mutableState.value =
-            FeedUiState(
+            PostListUiState(
                 isLoading = normalized.isNotEmpty(),
                 pendingLikes = state.value.pendingLikes,
             )
@@ -87,12 +87,12 @@ class FeedViewModel(
         }
     }
 
-    private suspend fun fetchPage(cursor: String?): FeedPage = when (mode) {
-        FeedMode.Home -> repository.fetchPage(cursor, PAGE_SIZE)
+    private suspend fun fetchPage(cursor: String?): FeedPage = when (source) {
+        PostListSource.HomeFeed -> repository.fetchPage(cursor, PAGE_SIZE)
 
-        FeedMode.Search -> repository.searchPosts(query, cursor, PAGE_SIZE)
+        PostListSource.SearchResults -> repository.searchPosts(query, cursor, PAGE_SIZE)
 
-        FeedMode.Profile -> repository.profilePosts(
+        PostListSource.ProfilePosts -> repository.profilePosts(
             repository.currentProfile().id,
             cursor,
             PAGE_SIZE,
@@ -116,7 +116,7 @@ class FeedViewModel(
     }
 
     fun refresh() {
-        if (mode == FeedMode.Search && query.isEmpty()) return
+        if (source == PostListSource.SearchResults && query.isEmpty()) return
         val requestGeneration = ++generation
         val startingMutationVersion = mutationVersion
         pageJob?.cancel()
@@ -146,7 +146,7 @@ class FeedViewModel(
                 throw error
             } catch (error: Exception) {
                 if (generation != requestGeneration) return@launch
-                val message = FeedSnackbarMessage(++messageId, FeedMessage.RefreshFailed)
+                val message = PostListSnackbarMessage(++messageId, PostListMessage.RefreshFailed)
                 mutableState.update {
                     it.copy(
                         isLoading = false,
@@ -154,9 +154,9 @@ class FeedViewModel(
                         initialError =
                         if (it.posts.isEmpty()) {
                             if (error is MissingApiKeyException) {
-                                FeedMessage.MissingConfiguration
+                                PostListMessage.MissingConfiguration
                             } else {
-                                FeedMessage.LoadFailed
+                                PostListMessage.LoadFailed
                             }
                         } else {
                             null
@@ -223,7 +223,7 @@ class FeedViewModel(
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                val message = FeedSnackbarMessage(++messageId, FeedMessage.LikeFailed)
+                val message = PostListSnackbarMessage(++messageId, PostListMessage.LikeFailed)
                 mutableState.update { it.copy(message = message) }
             } finally {
                 localPendingLikes.remove(postId)

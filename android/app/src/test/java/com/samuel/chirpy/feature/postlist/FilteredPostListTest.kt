@@ -1,4 +1,4 @@
-package com.samuel.chirpy.feature.feed
+package com.samuel.chirpy.feature.postlist
 
 import com.samuel.chirpy.core.data.PostChange
 import com.samuel.chirpy.core.model.FeedPage
@@ -24,7 +24,7 @@ import org.junit.Before
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class FilteredFeedTest {
+class FilteredPostListTest {
     private val dispatcher = StandardTestDispatcher()
     private val repository = FakeSocialRepository()
 
@@ -45,7 +45,7 @@ class FilteredFeedTest {
                 FeedPage(listOf(repository.post(query)), null)
             }
         }
-        val model = FeedViewModel(repository, FeedMode.Search)
+        val model = PostListViewModel(repository, PostListSource.SearchResults)
         model.search("o")
         advanceTimeBy(100)
         model.search("old")
@@ -67,7 +67,7 @@ class FilteredFeedTest {
     @Test fun searchPaginationKeepsQueryAndStopsRepeatedCursor() = runTest(dispatcher) {
         repository.search =
             { _, cursor -> FeedPage(listOf(repository.post(cursor ?: "first")), "next") }
-        val model = FeedViewModel(repository, FeedMode.Search)
+        val model = PostListViewModel(repository, PostListSource.SearchResults)
         model.search("  birds + trees  ")
         advanceUntilIdle()
         model.loadMore()
@@ -95,7 +95,7 @@ class FilteredFeedTest {
                     },
                 )
             }
-        val model = FeedViewModel(repository, FeedMode.Profile)
+        val model = PostListViewModel(repository, PostListSource.ProfilePosts)
         advanceUntilIdle()
         model.loadMore()
         advanceUntilIdle()
@@ -104,7 +104,7 @@ class FilteredFeedTest {
 
     @Test fun deletionAndLikeEventsWinOverInflightPages() = runTest(dispatcher) {
         repository.page = { FeedPage(listOf(repository.post("deleted")), "next") }
-        val model = FeedViewModel(repository)
+        val model = PostListViewModel(repository)
         advanceUntilIdle()
         val response = CompletableDeferred<FeedPage>()
         repository.page = { response.await() }
@@ -123,8 +123,8 @@ class FilteredFeedTest {
     }
 
     @Test fun creationRefreshesAllLoadedTimelines() = runTest(dispatcher) {
-        val home = FeedViewModel(repository)
-        val profile = FeedViewModel(repository, FeedMode.Profile)
+        val home = PostListViewModel(repository)
+        val profile = PostListViewModel(repository, PostListSource.ProfilePosts)
         advanceUntilIdle()
         repository.page = { FeedPage(listOf(repository.post("new")), null) }
         repository.changes.emit(PostChange.Created)

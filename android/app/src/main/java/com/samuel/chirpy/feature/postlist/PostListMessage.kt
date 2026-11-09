@@ -1,6 +1,6 @@
-package com.samuel.chirpy.feature.feed
+package com.samuel.chirpy.feature.postlist
 
-enum class FeedMessage {
+enum class PostListMessage {
     LoadFailed,
     RefreshFailed,
     LikeFailed,

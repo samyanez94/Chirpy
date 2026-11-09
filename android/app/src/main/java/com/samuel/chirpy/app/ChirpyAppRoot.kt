@@ -35,13 +35,12 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.samuel.chirpy.R
 import com.samuel.chirpy.core.data.SocialRepository
-import com.samuel.chirpy.feature.feed.FeedMode
-import com.samuel.chirpy.feature.feed.FeedViewModel
-import com.samuel.chirpy.feature.feed.Timeline
 import com.samuel.chirpy.feature.postcomposer.PostComposerScreen
 import com.samuel.chirpy.feature.postcomposer.PostComposerViewModel
 import com.samuel.chirpy.feature.postdetail.PostDetailScreen
 import com.samuel.chirpy.feature.postdetail.PostDetailViewModel
+import com.samuel.chirpy.feature.postlist.PostList
+import com.samuel.chirpy.feature.postlist.PostListViewModel
 import com.samuel.chirpy.feature.profile.ProfileScreen
 import com.samuel.chirpy.feature.search.SearchScreen
 
@@ -68,30 +67,31 @@ fun ChirpyAppRoot(repository: SocialRepository) {
             social.close()
         }
     }
-    var tab by rememberSaveable { mutableStateOf(FeedMode.Home) }
-    val home: FeedViewModel = feedModel(repository, FeedMode.Home)
-    val search: FeedViewModel = feedModel(repository, FeedMode.Search)
-    val profile: FeedViewModel = feedModel(repository, FeedMode.Profile)
+    var tab by rememberSaveable { mutableStateOf(AppTab.Home) }
+    val home: PostListViewModel = postListModel(repository, AppTab.Home)
+    val search: PostListViewModel = postListModel(repository, AppTab.Search)
+    val profile: PostListViewModel = postListModel(repository, AppTab.Profile)
     val savedTabs = rememberSaveableStateHolder()
     var searchText by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(searchText) { search.search(searchText) }
-    val activeFeed = when (tab) {
-        FeedMode.Home -> home
-        FeedMode.Search -> search
-        FeedMode.Profile -> profile
+    val activeList = when (tab) {
+        AppTab.Home -> home
+        AppTab.Search -> search
+        AppTab.Profile -> profile
     }
-    val feedState by key(tab) { activeFeed.state.collectAsStateWithLifecycle() }
+    val listState by key(tab) { activeList.state.collectAsStateWithLifecycle() }
     val refresh: () -> Unit = {
-        if (tab == FeedMode.Profile) social.loadProfile(refresh = true)
-        activeFeed.refresh()
+        if (tab == AppTab.Profile) social.loadProfile(refresh = true)
+        activeList.refresh()
     }
     val timeline: @Composable () -> Unit = {
-        Timeline(
-            state = feedState,
+        PostList(
+            showToolbar = false,
+            state = listState,
             onRefresh = refresh,
-            onLoadMore = activeFeed::loadMore,
-            onLike = activeFeed::toggleLike,
-            onMessageDismissed = activeFeed::dismissMessage,
+            onLoadMore = activeList::loadMore,
+            onLike = activeList::toggleLike,
+            onMessageDismissed = activeList::dismissMessage,
             onPost = { post ->
                 if (social.state.value.destination == AppDestination.Timeline) {
                     detail.open(post)
@@ -100,8 +100,8 @@ fun ChirpyAppRoot(repository: SocialRepository) {
             },
         )
     }
-    BackHandler(state.destination == AppDestination.Timeline && tab != FeedMode.Home) {
-        tab = FeedMode.Home
+    BackHandler(state.destination == AppDestination.Timeline && tab != AppTab.Home) {
+        tab = AppTab.Home
     }
     NavDisplay(
         backStack = state.backStack,
@@ -131,20 +131,20 @@ fun ChirpyAppRoot(repository: SocialRepository) {
             entry<AppDestination.Timeline> {
                 Scaffold(
                     topBar = {
-                        TopAppBar(title = { Text(stringResource(tab.titleResource())) })
+                        TopAppBar(title = { Text(stringResource(tab.titleResource)) })
                     },
                     bottomBar = {
                         NavigationBar {
-                            FeedMode.entries.forEach { mode ->
-                                val label = stringResource(mode.titleResource())
+                            AppTab.entries.forEach { item ->
+                                val label = stringResource(item.titleResource)
                                 NavigationBarItem(
-                                    selected = tab == mode,
+                                    selected = tab == item,
                                     colors = NavigationBarItemDefaults.colors(
                                         selectedIconColor = MaterialTheme.colorScheme.primary,
                                         selectedTextColor = MaterialTheme.colorScheme.primary,
                                     ),
-                                    onClick = { tab = mode },
-                                    icon = { Icon(painterResource(mode.iconResource()), null) },
+                                    onClick = { tab = item },
+                                    icon = { Icon(painterResource(item.iconResource), null) },
                                     label = { Text(label) },
                                 )
                             }
@@ -171,13 +171,13 @@ fun ChirpyAppRoot(repository: SocialRepository) {
                     ) {
                         savedTabs.SaveableStateProvider(tab.name) {
                             when (tab) {
-                                FeedMode.Home -> timeline()
+                                AppTab.Home -> timeline()
 
-                                FeedMode.Search -> SearchScreen(searchText, {
+                                AppTab.Search -> SearchScreen(searchText, {
                                     searchText = it
                                 }, timeline)
 
-                                FeedMode.Profile -> ProfileScreen(
+                                AppTab.Profile -> ProfileScreen(
                                     state.profile,
                                     refresh,
                                     timeline,
@@ -197,19 +197,7 @@ fun ChirpyAppRoot(repository: SocialRepository) {
 }
 
 @Composable
-private fun feedModel(repository: SocialRepository, mode: FeedMode): FeedViewModel = viewModel(
-    key = mode.name,
-    factory = viewModelFactory { initializer { FeedViewModel(repository, mode) } },
+private fun postListModel(repository: SocialRepository, tab: AppTab): PostListViewModel = viewModel(
+    key = tab.name,
+    factory = viewModelFactory { initializer { PostListViewModel(repository, tab.source) } },
 )
-
-private fun FeedMode.titleResource(): Int = when (this) {
-    FeedMode.Home -> R.string.home
-    FeedMode.Search -> R.string.search
-    FeedMode.Profile -> R.string.profile
-}
-
-private fun FeedMode.iconResource(): Int = when (this) {
-    FeedMode.Home -> R.drawable.ic_home
-    FeedMode.Search -> R.drawable.ic_search
-    FeedMode.Profile -> R.drawable.ic_profile
-}
