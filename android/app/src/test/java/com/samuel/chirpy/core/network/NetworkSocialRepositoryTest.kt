@@ -14,7 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 
-class NetworkFeedRepositoryTest {
+class NetworkSocialRepositoryTest {
     private val server = MockWebServer()
 
     @Before
@@ -31,7 +31,7 @@ class NetworkFeedRepositoryTest {
     fun decodesFeedAndPassesOpaqueCursorWithApiKey() = runTest {
         val body = checkNotNull(javaClass.getResource("/social-feed-page.json")).readText()
         server.enqueue(MockResponse().setBody(body))
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         val page = repository.fetchPage("cursor+with/symbols=", 20)
         val request = server.takeRequest()
         assertEquals("test-key", request.getHeader("X-Chirpy-API-Key"))
@@ -52,7 +52,7 @@ class NetworkFeedRepositoryTest {
                     """{"error":{"code":"invalid_cursor","message":"Invalid cursor","requestID":"request-123"}}""",
                 ),
         )
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         try {
             repository.fetchPage("bad", 20)
             fail("Expected API error")
@@ -66,7 +66,7 @@ class NetworkFeedRepositoryTest {
     @Test
     fun nonJsonServerFailureHasSafeFallback() = runTest {
         server.enqueue(MockResponse().setResponseCode(502).setBody("Bad Gateway"))
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         try {
             repository.fetchPage(null, 20)
             fail("Expected API error")
@@ -78,7 +78,7 @@ class NetworkFeedRepositoryTest {
 
     @Test
     fun missingKeyDoesNotSendRequest() = runTest {
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "")
         try {
             repository.fetchPage(null, 20)
             fail("Expected configuration error")
@@ -89,7 +89,7 @@ class NetworkFeedRepositoryTest {
 
     @Test
     fun likeAndUnlikeUseCorrectMethods() = runTest {
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         for ((liked, method) in listOf(true to "POST", false to "DELETE")) {
             server.enqueue(
                 MockResponse().setBody("""{"postID":"post","isLiked":$liked,"likeCount":3}"""),
@@ -106,7 +106,7 @@ class NetworkFeedRepositoryTest {
 
     @Test
     fun searchAndProfileRequestsPreserveFiltersAndCursors() = runTest {
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         val body = checkNotNull(javaClass.getResource("/social-feed-page.json")).readText()
         server.enqueue(MockResponse().setBody(body))
         repository.searchPosts("birds + 🐦 & trees", "next+/=", 20)
@@ -123,7 +123,7 @@ class NetworkFeedRepositoryTest {
 
     @Test
     fun profileCreationAndDeletionUseSharedApiContract() = runTest {
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         server.enqueue(
             MockResponse().setBody("""{"id":"me","username":"bird","displayName":"Bird"}"""),
         )
@@ -148,7 +148,7 @@ class NetworkFeedRepositoryTest {
 
     @Test
     fun missingPostDeletionSucceedsButForbiddenDeletionFails() = runTest {
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         server.enqueue(
             MockResponse().setResponseCode(404).setBody(
                 """{"error":{"code":"post_not_found","message":"Gone","requestID":"request"}}""",
@@ -170,7 +170,7 @@ class NetworkFeedRepositoryTest {
 
     @Test
     fun concurrentProfileLoadsShareCacheAndFailedRefreshPreservesProfile() = runTest {
-        val repository = NetworkFeedRepository.create(server.url("/").toString(), "test-key")
+        val repository = NetworkSocialRepository.create(server.url("/").toString(), "test-key")
         server.enqueue(
             MockResponse().setBody("""{"id":"me","username":"bird","displayName":"Bird"}"""),
         )

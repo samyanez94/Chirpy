@@ -25,7 +25,7 @@ import retrofit2.HttpException
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
 
-internal class NetworkFeedRepository(
+internal class NetworkSocialRepository(
     private val api: ChirpyApi,
     private val json: Json,
     private val hasApiKey: Boolean,
@@ -138,7 +138,7 @@ internal class NetworkFeedRepository(
                     .addConverterFactory(json.asConverterFactory("application/json".toMediaType()))
                     .build()
                     .create(ChirpyApi::class.java)
-            return NetworkFeedRepository(api, json, apiKey.isNotBlank())
+            return NetworkSocialRepository(api, json, apiKey.isNotBlank())
         }
     }
 }
