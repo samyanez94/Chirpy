@@ -25,7 +25,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.samuel.chirpy.R
 import com.samuel.chirpy.core.data.CurrentProfileState
-import com.samuel.chirpy.core.model.Post
 import com.samuel.chirpy.core.ui.PostRow
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -34,7 +33,6 @@ import java.time.format.FormatStyle
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PostDetailScreen(
-    post: Post,
     state: PostDetailUiState,
     profile: CurrentProfileState,
     onLike: () -> Unit,
@@ -42,6 +40,7 @@ internal fun PostDetailScreen(
     onClose: () -> Unit,
     onRetryProfile: () -> Unit,
 ) {
+    val post = state.post ?: return
     var confirmDelete by rememberSaveable(post.id) { mutableStateOf(false) }
     val busy = state.isBusy
     Scaffold(topBar = {

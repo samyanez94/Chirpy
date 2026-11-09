@@ -23,8 +23,7 @@ class PostDetailScreenTest {
         compose.setContent {
             ChirpyTheme {
                 PostDetailScreen(
-                    post,
-                    PostDetailUiState(),
+                    PostDetailUiState(post = post),
                     CurrentProfileState(
                         profile = profile,
                     ),
@@ -48,8 +47,7 @@ class PostDetailScreenTest {
         compose.setContent {
             ChirpyTheme {
                 PostDetailScreen(
-                    post,
-                    PostDetailUiState(),
+                    PostDetailUiState(post = post),
                     CurrentProfileState(profile = profile.copy(id = "other")),
                     {
                     },

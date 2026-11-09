@@ -39,7 +39,9 @@ import com.samuel.chirpy.feature.feed.FeedMode
 import com.samuel.chirpy.feature.feed.FeedViewModel
 import com.samuel.chirpy.feature.feed.Timeline
 import com.samuel.chirpy.feature.postcomposer.PostComposerScreen
+import com.samuel.chirpy.feature.postcomposer.PostComposerViewModel
 import com.samuel.chirpy.feature.postdetail.PostDetailScreen
+import com.samuel.chirpy.feature.postdetail.PostDetailViewModel
 import com.samuel.chirpy.feature.profile.ProfileScreen
 import com.samuel.chirpy.feature.search.SearchScreen
 
@@ -52,6 +54,20 @@ fun ChirpyAppRoot(repository: SocialRepository) {
         },
     )
     val state by social.state.collectAsStateWithLifecycle()
+    val composer: PostComposerViewModel = viewModel(
+        factory = viewModelFactory { initializer { PostComposerViewModel(repository) } },
+    )
+    val composerState by composer.state.collectAsStateWithLifecycle()
+    val detail: PostDetailViewModel = viewModel(
+        factory = viewModelFactory { initializer { PostDetailViewModel(repository) } },
+    )
+    val detailState by detail.state.collectAsStateWithLifecycle()
+    val close: () -> Unit = {
+        if (!composer.state.value.isPosting && !detail.state.value.isBusy) {
+            detail.close()
+            social.close()
+        }
+    }
     var tab by rememberSaveable { mutableStateOf(FeedMode.Home) }
     val home: FeedViewModel = feedModel(repository, FeedMode.Home)
     val search: FeedViewModel = feedModel(repository, FeedMode.Search)
@@ -76,7 +92,12 @@ fun ChirpyAppRoot(repository: SocialRepository) {
             onLoadMore = activeFeed::loadMore,
             onLike = activeFeed::toggleLike,
             onMessageDismissed = activeFeed::dismissMessage,
-            onPost = social::openPost,
+            onPost = { post ->
+                if (social.state.value.destination == AppDestination.Timeline) {
+                    detail.open(post)
+                    social.open(AppDestination.Detail(post.id))
+                }
+            },
         )
     }
     BackHandler(state.destination == AppDestination.Timeline && tab != FeedMode.Home) {
@@ -84,26 +105,25 @@ fun ChirpyAppRoot(repository: SocialRepository) {
     }
     NavDisplay(
         backStack = state.backStack,
-        onBack = social::close,
+        onBack = close,
         entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator()),
         entryProvider = entryProvider {
             entry<AppDestination.Composer> {
                 PostComposerScreen(
-                    state.composer,
-                    social::editDraft,
-                    social::publish,
-                    social::close,
+                    composerState,
+                    composer::editDraft,
+                    { composer.publish(social::close) },
+                    close,
                 )
             }
             entry<AppDestination.Detail> { destination ->
-                state.selectedPost?.takeIf { it.id == destination.postId }?.let { post ->
+                if (detailState.post?.id == destination.postId) {
                     PostDetailScreen(
-                        post,
-                        state.detail,
+                        detailState,
                         state.profile,
-                        social::toggleLike,
-                        social::delete,
-                        social::close,
+                        detail::toggleLike,
+                        detail::delete,
+                        close,
                         { social.loadProfile(refresh = true) },
                     )
                 }
@@ -132,7 +152,10 @@ fun ChirpyAppRoot(repository: SocialRepository) {
                     },
                     floatingActionButton = {
                         ExtendedFloatingActionButton(
-                            onClick = social::compose,
+                            onClick = {
+                                composer.open()
+                                social.open(AppDestination.Composer)
+                            },
                             icon = {
                                 Icon(
                                     painterResource(R.drawable.ic_edit),
@@ -169,7 +192,7 @@ fun ChirpyAppRoot(repository: SocialRepository) {
     // Consume Back while a mutation is active, including before a predictive pop starts.
     BackHandler(
         state.destination != AppDestination.Timeline &&
-            (state.composer.isPosting || state.detail.isBusy),
+            (composerState.isPosting || detailState.isBusy),
     ) {}
 }
 

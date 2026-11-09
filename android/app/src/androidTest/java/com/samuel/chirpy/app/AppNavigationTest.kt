@@ -18,6 +18,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import com.samuel.chirpy.core.ui.ChirpyTheme
+import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
 import org.junit.Test
 
@@ -26,8 +27,7 @@ class AppNavigationTest {
     private lateinit var backDispatcher: OnBackPressedDispatcher
     private var keyboard: SoftwareKeyboardController? = null
 
-    private fun showApp() {
-        val repository = NavigationTestRepository()
+    private fun showApp(repository: NavigationTestRepository = NavigationTestRepository()) {
         compose.setContent {
             backDispatcher = checkNotNull(LocalOnBackPressedDispatcherOwner.current)
                 .onBackPressedDispatcher
@@ -85,6 +85,43 @@ class AppNavigationTest {
         compose.onNodeWithContentDescription("Close").performClick()
         pressBack()
         compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
+    }
+
+    @Test fun backWaitsForPublishAndDetailLikeToFinish() {
+        val publish = CompletableDeferred<Unit>()
+        val like = CompletableDeferred<Unit>()
+        showApp(
+            NavigationTestRepository(beforePublish = {
+                publish.await()
+            }, beforeLike = { like.await() }),
+        )
+        openComposer()
+        compose.onNodeWithText("Post text").performTextInput("Pending post")
+        closeSoftKeyboard()
+        compose.onNodeWithText("Post").performClick()
+        pressBack()
+        compose.onNodeWithText("Pending post").assertIsDisplayed()
+        publish.complete(Unit)
+        compose.onNodeWithText("Hello flock").performClick()
+        compose.onNodeWithContentDescription("Like post").performClick()
+        pressBack()
+        compose.onNodeWithContentDescription("Back").assertIsDisplayed()
+        like.complete(Unit)
+        compose.onNodeWithContentDescription("Unlike post").assertIsDisplayed()
+        pressBack()
+        compose.onNode(hasText("Home") and isSelectable()).assertIsSelected()
+    }
+
+    @Test fun draftFollowsComposerFromSearchToProfile() {
+        showApp()
+        compose.onNode(hasText("Search") and isSelectable()).performClick()
+        openComposer()
+        compose.onNodeWithText("Post text").performTextInput("One shared draft")
+        closeSoftKeyboard()
+        pressBack()
+        compose.onNode(hasText("Profile") and isSelectable()).performClick()
+        openComposer()
+        compose.onNodeWithText("One shared draft").assertIsDisplayed()
     }
 
     @Test fun publishingFromSearchAndProfileReturnsToTheOriginatingTab() {
